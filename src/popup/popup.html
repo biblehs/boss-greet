@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BossGreet</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部导航 -->
+    <header id="topBar">
+      <div class="logo">BossGreet</div>
+      <nav id="nav">
+        <button class="nav-btn active" data-page="a">配置</button>
+        <button class="nav-btn" data-page="b">投递</button>
+        <button class="nav-btn" data-page="review">结果</button>
+      </nav>
+    </header>
+
+    <!-- A 页：配置 -->
+    <main id="page-a" class="page active">
+      <section class="section">
+        <h3>📄 简历</h3>
+        <div id="resume-upload-area">
+          <div class="upload-row">
+            <label class="upload-btn">
+              上传 PDF 简历
+              <input type="file" id="resumePdfInput" accept=".pdf" hidden>
+            </label>
+            <label class="upload-btn secondary">
+              上传图片简历
+              <input type="file" id="resumeImgInput" accept="image/*" multiple hidden>
+            </label>
+          </div>
+          <div id="resume-status" class="status-text">未上传简历</div>
+          <div id="resume-preview" class="resume-preview" style="display:none">
+            <pre id="resume-text-preview"></pre>
+          </div>
+          <div class="manual-input">
+            <textarea id="resumeTextInput" placeholder="或直接粘贴简历文本..." rows="4"></textarea>
+            <button id="saveResumeText" class="btn-small">保存文本</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>🤖 AI 配置</h3>
+        <div class="form-group">
+          <label>提供商</label>
+          <select id="aiProvider">
+            <option value="mimo">小米 MiMo (默认)</option>
+            <option value="qwen">阿里云百炼 (Qwen)</option>
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="claude">Anthropic (Claude)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="apiKey" placeholder="输入你的 API Key">
+        </div>
+        <div class="form-group">
+          <label>模型</label>
+          <input type="text" id="aiModel" placeholder="默认: MiMo-v2.5-pro-1M">
+        </div>
+        <div class="btn-row">
+          <button id="saveApiConfig" class="btn-primary">保存配置</button>
+          <button id="testApi" class="btn-secondary">测试连接</button>
+        </div>
+        <div id="api-test-result" class="status-text"></div>
+      </section>
+
+      <section class="section">
+        <h3>🔍 职位筛选</h3>
+        <div class="form-group">
+          <label>目标城市</label>
+          <select id="citySelect">
+            <option value="101280600">深圳</option>
+            <option value="101010100">北京</option>
+            <option value="101020100">上海</option>
+            <option value="101270100">广州</option>
+            <option value="101210100">杭州</option>
+            <option value="101030100">天津</option>
+            <option value="101110100">西安</option>
+            <option value="101190400">苏州</option>
+            <option value="101200100">武汉</option>
+            <option value="101230100">厦门</option>
+            <option value="101250100">长沙</option>
+            <option value="101270100">成都</option>
+            <option value="000000">全国</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>搜索关键词</label>
+          <input type="text" id="searchKeyword" placeholder="如：前端开发">
+        </div>
+        <div class="form-group">
+          <label>经验要求</label>
+          <select id="experienceSelect">
+            <option value="">不限</option>
+            <option value="103">应届生</option>
+            <option value="104">1-3年</option>
+            <option value="105">3-5年</option>
+            <option value="106">5-10年</option>
+            <option value="107">10年以上</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>HR 活跃筛选</label>
+          <select id="hrActiveFilter">
+            <option value="不限">不限</option>
+            <option value="只投在线">只投在线</option>
+            <option value="3日内活跃">3日内活跃</option>
+            <option value="本周内活跃">本周内活跃</option>
+            <option value="本月内活跃">本月内活跃</option>
+          </select>
+        </div>
+      </section>
+    </main>
+
+    <!-- B 页：投递 -->
+    <main id="page-b" class="page">
+      <div id="b-empty" class="empty-state">
+        <p>还没有采集岗位</p>
+        <p>请先在「配置」页设置筛选条件</p>
+      </div>
+      <div id="b-content" style="display:none">
+        <div class="toolbar">
+          <span id="job-count"></span>
+          <div class="btn-row">
+            <button id="btnStartCollect" class="btn-primary">开始采集</button>
+            <button id="btnStopCollect" class="btn-danger" style="display:none">停止</button>
+          </div>
+        </div>
+        <div id="greeting-progress" class="progress-bar" style="display:none">
+          <div class="progress-fill" id="greetingProgressFill"></div>
+          <span class="progress-text" id="greetingProgressText"></span>
+        </div>
+        <div id="job-groups"></div>
+        <div class="bottom-bar">
+          <button id="btnStartSend" class="btn-primary btn-large">一键投递</button>
+        </div>
+      </div>
+
+      <!-- 发送中 -->
+      <div id="b-sending" style="display:none">
+        <div class="sending-status">
+          <div class="spinner"></div>
+          <p id="sending-status-text">正在投递...</p>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="sendProgressFill"></div>
+          <span class="progress-text" id="sendProgressText"></span>
+        </div>
+        <div id="send-log"></div>
+        <button id="btnStopSend" class="btn-danger">停止投递</button>
+      </div>
+    </main>
+
+    <!-- Review 页 -->
+    <main id="page-review" class="page">
+      <div id="review-empty" class="empty-state">
+        <p>暂无投递结果</p>
+      </div>
+      <div id="review-content" style="display:none">
+        <div class="review-stats">
+          <div class="stat"><span class="stat-num" id="statSuccess">0</span><span>成功</span></div>
+          <div class="stat"><span class="stat-num" id="statFailed">0</span><span>失败</span></div>
+          <div class="stat"><span class="stat-num" id="statTotal">0</span><span>总计</span></div>
+          <div class="stat"><span class="stat-num" id="statDuration">0s</span><span>耗时</span></div>
+        </div>
+        <div id="review-list"></div>
+        <div class="bottom-bar">
+          <button id="btnRedo" class="btn-primary btn-large">重新投递</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- 全局错误提示 -->
+    <div id="error-toast" class="toast" style="display:none"></div>
+  </div>
+
+  <script src="state.js"></script>
+  <script src="helpers.js"></script>
+  <script src="render-a.js"></script>
+  <script src="render-b.js"></script>
+  <script src="render-review.js"></script>
+  <script src="events-a.js"></script>
+  <script src="events-b.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
