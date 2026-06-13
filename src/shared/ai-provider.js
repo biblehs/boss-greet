@@ -15,6 +15,7 @@ const AIProvider = {
   async call(provider, apiKey, model, messages, opts = {}) {
     const p = AI_PROVIDERS[provider];
     if (!p) throw new Error('不支持的 AI 提供商: ' + provider);
+    apiKey = (apiKey || '').trim();
     if (!apiKey) throw new Error('请先配置 API Key');
 
     const timeoutMs = opts.timeoutMs || 30000;

@@ -119,13 +119,13 @@ const AI_PROVIDERS = {
   mimo: {
     name: '小米 MiMo (DashScope)',
     endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    defaultModel: 'MiMo-v2.5-pro-1M',
+    defaultModel: 'xiaomi/mimo-v2.5-pro',
     headers(apiKey) {
       return { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
     },
     buildBody(model, messages, opts) {
       return {
-        model: model || 'MiMo-v2.5-pro-1M',
+        model: model || 'xiaomi/mimo-v2.5-pro',
         messages,
         max_tokens: opts.maxTokens || 500,
         temperature: opts.temperature || 0.4,
