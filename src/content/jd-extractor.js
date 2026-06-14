@@ -1,24 +1,20 @@
 // ════════════════════════════════════════════════════════════
-// BossGreet — JD 正文提取器
-// 从搜索页右侧面板 / 详情页提取完整的岗位描述
+// BossGreet — Job Description Extractor
+// Extracts full JD text from search panel / detail pages
 // ════════════════════════════════════════════════════════════
 
 const JDExtractor = {
   /**
-   * 从搜索页右侧详情面板提取 JD（快速路径）
-   * 点击岗位卡片后右侧面板展开，包含部分 JD 内容
-   * @returns {{desc: string, tags: string[], hrName: string, hrCompany: string, complete: boolean} | null}
+   * Extract JD from the right-side panel on search page (fast path)
+   * @returns {{desc: string, tags: string[], hrName: string, hrCompany: string, activity: Object, complete: boolean} | null}
    */
   extractFromPanel() {
-    // 提取 JD 正文
     const descEl = document.querySelector(SELECTORS.jobPanel.jobDesc);
     const desc = descEl ? descEl.textContent.trim() : '';
 
-    // 提取标签
     const tagEls = document.querySelectorAll(SELECTORS.jobPanel.jobTags);
     const tags = [...tagEls].map(el => el.textContent.trim()).filter(Boolean);
 
-    // 提取 HR 信息
     const bossInfo = document.querySelector(SELECTORS.jobPanel.bossInfo);
     let hrName = '', hrCompany = '';
     if (bossInfo) {
@@ -34,7 +30,6 @@ const JDExtractor = {
       if (attrEl) hrCompany = (attrEl.textContent.trim().split(' · ')[0] || '').trim();
     }
 
-    // HR 活跃状态
     const onlineEl = bossInfo?.querySelector('.boss-online-tag');
     const activeEl = bossInfo?.querySelector('.boss-active-time');
     const activity = this._parseActivity(
@@ -43,17 +38,13 @@ const JDExtractor = {
     );
 
     return {
-      desc,
-      tags,
-      hrName,
-      hrCompany,
-      activity,
+      desc, tags, hrName, hrCompany, activity,
       complete: desc.length >= CONFIG.JD_MIN_LENGTH,
     };
   },
 
   /**
-   * 从详情页提取完整 JD
+   * Extract full JD from detail page
    * @returns {{fullDesc: string, sections: Object}}
    */
   extractFromDetailPage() {
@@ -62,7 +53,6 @@ const JDExtractor = {
     const fullDesc = descEl ? descEl.textContent.trim() : '';
     const sections = this._parseSections(fullDesc);
 
-    // 提取页面上的其他信息
     const jobName = document.querySelector(SELECTORS.jobDetail.jobName)?.textContent.trim() || '';
     const company = document.querySelector(SELECTORS.jobDetail.companyName)?.textContent.trim() || '';
     const salary = document.querySelector(SELECTORS.jobDetail.salary)?.textContent.trim() || '';
@@ -73,8 +63,7 @@ const JDExtractor = {
   },
 
   /**
-   * 解析 JD 结构化段落
-   * BOSS 的 JD 通常是一大段文本，包含职责、要求等
+   * Parse JD into structured sections
    */
   _parseSections(text) {
     if (!text) return {};
@@ -82,80 +71,68 @@ const JDExtractor = {
     const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
     let current = 'overview';
 
-    for (const line of lines) {
-      // 识别段落标题
-      if (/^(岗位职责|工作内容|工作职责|职责描述|你将负责)[：:]/.test(line)) {
-        current = 'responsibilities';
-        const afterColon = line.replace(/^.{2,8}[：:]\s*/, '');
-        if (afterColon) {
-          if (!sections[current]) sections[current] = [];
-          sections[current].push(afterColon);
-        }
-        continue;
-      }
-      if (/^(任职要求|岗位要求|职位要求|我们希望你|必备条件|基本要求)[：:]/.test(line)) {
-        current = 'requirements';
-        const afterColon = line.replace(/^.{2,8}[：:]\s*/, '');
-        if (afterColon) {
-          if (!sections[current]) sections[current] = [];
-          sections[current].push(afterColon);
-        }
-        continue;
-      }
-      if (/^(加分项|优先条件|优先考虑|加分条件)[：:]/.test(line)) {
-        current = 'bonus';
-        const afterColon = line.replace(/^.{2,8}[：:]\s*/, '');
-        if (afterColon) {
-          if (!sections[current]) sections[current] = [];
-          sections[current].push(afterColon);
-        }
-        continue;
-      }
-      if (/^(福利待遇|我们提供|薪资福利|公司福利)[：:]/.test(line)) {
-        current = 'benefits';
-        const afterColon = line.replace(/^.{2,8}[：:]\s*/, '');
-        if (afterColon) {
-          if (!sections[current]) sections[current] = [];
-          sections[current].push(afterColon);
-        }
-        continue;
-      }
+    const sectionPatterns = [
+      { pattern: /^(Responsibilities|Key Responsibilities|What You'll Do|Role Overview|Your Impact)[：:]/i, key: 'responsibilities' },
+      { pattern: /^(Requirements|Qualifications|What We're Looking For|Must Have|Basic Requirements)[：:]/i, key: 'requirements' },
+      { pattern: /^(Nice to Have|Bonus|Preferred|Preferred Qualifications)[：:]/i, key: 'bonus' },
+      { pattern: /^(Benefits|Perks|What We Offer|Compensation)[：:]/i, key: 'benefits' },
+      { pattern: /^(岗位职责|工作内容|工作职责|职责描述|你将负责)[：:]/, key: 'responsibilities' },
+      { pattern: /^(任职要求|岗位要求|职位要求|我们希望你|必备条件|基本要求)[：:]/, key: 'requirements' },
+      { pattern: /^(加分项|优先条件|优先考虑|加分条件)[：:]/, key: 'bonus' },
+      { pattern: /^(福利待遇|我们提供|薪资福利|公司福利)[：:]/, key: 'benefits' },
+    ];
 
-      if (!sections[current]) sections[current] = [];
-      sections[current].push(line);
+    for (const line of lines) {
+      let matched = false;
+      for (const sp of sectionPatterns) {
+        if (sp.pattern.test(line)) {
+          current = sp.key;
+          const afterColon = line.replace(/^.{2,20}[：:]\s*/, '');
+          if (afterColon) {
+            if (!sections[current]) sections[current] = [];
+            sections[current].push(afterColon);
+          }
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        if (!sections[current]) sections[current] = [];
+        sections[current].push(line);
+      }
     }
     return sections;
   },
 
   /**
-   * 解析 HR 活跃状态
+   * Parse recruiter activity status
    */
   _parseActivity(onlineText, activeText) {
-    if (onlineText && /在线/.test(onlineText)) return { online: true, activeDays: 0, desc: '在线' };
+    if (onlineText && /online|在线/i.test(onlineText)) return { online: true, activeDays: 0, desc: 'Online' };
     const t = (activeText || '').trim();
     if (!t) return { online: false, activeDays: null, desc: '' };
-    if (/刚刚|今日|今天/.test(t)) return { online: false, activeDays: 1, desc: t };
-    const dm = t.match(/(\d+)\s*日内/);
-    if (dm) return { online: false, activeDays: parseInt(dm[1]), desc: t };
-    if (/本周/.test(t)) return { online: false, activeDays: 7, desc: t };
-    const wm = t.match(/(\d+)\s*周内/);
-    if (wm) return { online: false, activeDays: parseInt(wm[1]) * 7, desc: t };
-    if (/本月/.test(t)) return { online: false, activeDays: 30, desc: t };
-    const mm = t.match(/(\d+)\s*月内/);
-    if (mm) return { online: false, activeDays: parseInt(mm[1]) * 30, desc: t };
+    if (/just now|today|今日|今天/i.test(t)) return { online: false, activeDays: 1, desc: t };
+    const dm = t.match(/(\d+)\s*days?\s*ago|(\d+)\s*日内/);
+    if (dm) return { online: false, activeDays: parseInt(dm[1] || dm[2]), desc: t };
+    if (/this week|本周/i.test(t)) return { online: false, activeDays: 7, desc: t };
+    const wm = t.match(/(\d+)\s*weeks?\s*ago|(\d+)\s*周内/);
+    if (wm) return { online: false, activeDays: parseInt(wm[1] || wm[2]) * 7, desc: t };
+    if (/this month|本月/i.test(t)) return { online: false, activeDays: 30, desc: t };
+    const mm = t.match(/(\d+)\s*months?\s*ago|(\d+)\s*月内/);
+    if (mm) return { online: false, activeDays: parseInt(mm[1] || mm[2]) * 30, desc: t };
     return { online: false, activeDays: null, desc: t };
   },
 
   /**
-   * 从 JD 正文中提取关键词（用于匹配简历）
+   * Extract keywords from JD text for resume matching
    */
   extractKeywords(jdText) {
     if (!jdText) return [];
-    // 技术关键词模式
     const patterns = [
-      /[A-Za-z][A-Za-z0-9.#+]+(?:\s*\d+(?:\.\d+)?(?:\s*年)?(?:以上经验)?)/g,  // "React 3年"
+      /[A-Za-z][A-Za-z0-9.#+]+(?:\s*\d+(?:\.\d+)?(?:\s*y(?:ears?)?)?(?:\+)?(?:\s*exp(?:erience)?)?)/gi,
+      /(?:familiar with|proficient in|experience (?:with|in)|knowledge of|skilled in|expertise in)\s+([^.,]{2,40})/gi,
       /(?:熟悉|精通|掌握|了解|熟练|擅长|具备)\s*([^，。,.]{2,30})/g,
-      /(?:技术栈|要求|技能)[：:]\s*([^。]{5,100})/g,
+      /(?:tech stack|skills|requirements)[：:]\s*([^。.]{5,100})/gi,
     ];
     const keywords = new Set();
     for (const pat of patterns) {
@@ -164,7 +141,6 @@ const JDExtractor = {
         keywords.add(match[1] || match[0]);
       }
     }
-    // 提取括号里的英文技术名词
     const techMatch = jdText.match(/[一-鿿]+[（(]([A-Za-z][A-Za-z0-9.#+]+)[）)]/g);
     if (techMatch) {
       techMatch.forEach(m => {

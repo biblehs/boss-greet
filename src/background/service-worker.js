@@ -1,16 +1,16 @@
 // ════════════════════════════════════════════════════════════
 // BossGreet — Service Worker
-// 消息中枢 + 多模型 AI + per-JD 招呼语生成 + 发送编排
+// Message hub + multi-model AI + per-JD greeting generation + send orchestration
 // ════════════════════════════════════════════════════════════
 
 importScripts('/src/shared/constants.js');
 importScripts('/src/shared/ai-provider.js');
 
-// ── 状态管理 ──
+// -- State management --
 let state = {
   phase: 'idle', // idle | collecting | ready | sending | review | captcha_paused
   jobs: [],
-  greetings: {}, // jobId → greeting（per-JD，不是 per-category）
+  greetings: {}, // jobId -> greeting (per-JD, not per-category)
   greetingProgress: { done: 0, total: 0 },
   sendProgress: { sent: 0, total: 0 },
   sendResults: [],
@@ -25,8 +25,8 @@ let state = {
   _v6RepairQueue: [],
   _v6SearchReady: false,
   originalMainWindowId: null,
-  hrActiveFilter: '不限',
-  resumeText: '', // 结构化简历文本
+  hrActiveFilter: 'any',
+  resumeText: '', // Structured resume text
 };
 
 const sentJobIds = new Set();
@@ -35,7 +35,7 @@ let abortStage1 = null;
 let sendAborted = false;
 let greetingPromise = null;
 
-// ── 状态持久化 ──
+// -- State persistence --
 let persistTimer = null;
 function persistState() {
   clearTimeout(persistTimer);
@@ -62,7 +62,7 @@ function pushState() {
   persistState();
 }
 
-// ── 启动恢复 ──
+// -- Startup recovery --
 chrome.storage.local.get([
   STORAGE_KEYS.SW.PHASE, STORAGE_KEYS.SW.JOBS, STORAGE_KEYS.SW.GREETINGS,
   STORAGE_KEYS.SW.SEND_PROGRESS, STORAGE_KEYS.SW.SENT_JOB_IDS,
@@ -91,54 +91,54 @@ chrome.storage.local.get([
   }
 });
 
-// ── 错误捕获 ──
+// -- Error capture --
 self.addEventListener('error', e => console.error('[BossGreet] SW error:', e.message));
 self.addEventListener('unhandledrejection', e => console.error('[BossGreet] SW rejection:', e.reason?.message));
 
-// ── 侧边栏行为 ──
+// -- Side panel behavior --
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 
 // ════════════════════════════════════════════════════════════
-// Per-JD 招呼语生成（核心改动）
+// Per-JD greeting generation (core feature)
 // ════════════════════════════════════════════════════════════
 
 function getSystemPrompt() {
-  return `你是求职者本人，正在BOSS直聘上给HR发送招呼语。你的回复将直接发送给HR，严禁添加任何注释、说明、括号备注、替换建议或引导语。
+  return `You are a job seeker on BOSS Zhipin sending a personalized greeting to a recruiter. Your reply will be sent directly to the recruiter. Do not add any comments, notes, bracketed annotations, alternative suggestions, or introductory remarks.
 
-【核心规则】
-1. 仔细阅读下方"岗位JD"中的具体要求（职责、技术栈、经验要求等）
-2. 从"你的简历"中找到与JD要求最匹配的经历和技能
-3. 必须包含至少1个量化成果（数字、百分比、金额、规模等具体数据）
-4. 字数控制在80-120字，语气真诚专业，不要夸张
-5. 如果JD提到了具体技术栈，你必须在简历中找到对应的使用经验
+【Core Rules】
+1. Carefully read the specific requirements in the "Job Description" below (responsibilities, tech stack, experience requirements, etc.)
+2. Find the most relevant experience and skills from "Your Resume" that match the JD requirements
+3. Include at least 1 quantified achievement (numbers, percentages, monetary values, scale metrics, etc.)
+4. Keep the message between 80-120 characters, use a sincere and professional tone, do not exaggerate
+5. If the JD mentions a specific tech stack, you must reference your corresponding experience from your resume
 
-【好的招呼语示例】
-"您好，我有5年前端开发经验，目前在腾讯负责XX平台，React+TypeScript技术栈。主导的性能优化项目将首屏加载时间从3.2s降至0.8s，日活用户50万+。看到贵司JD中提到的微前端架构和性能优化方向，与我的经验高度匹配，期待进一步沟通。"
+【Good Greeting Example】
+"Hello, I have 5 years of frontend development experience. I currently lead the XX platform at Tencent using React+TypeScript. My performance optimization project reduced first-screen load time from 3.2s to 0.8s, serving 500K+ daily active users. The micro-frontend architecture and performance optimization direction mentioned in your JD align closely with my experience. Looking forward to connecting."
 
-这个示例好在：
-- 匹配了JD的技术栈要求（React、TypeScript）
-- 有量化成果（3.2s→0.8s，50万+日活）
-- 点出了JD中的具体方向（微前端、性能优化）
-- 长度合适，结尾自然`;
+This example works because:
+- It matches the JD's tech stack requirements (React, TypeScript)
+- It includes quantified results (3.2s -> 0.8s, 500K+ DAU)
+- It references specific directions from the JD (micro-frontend, performance optimization)
+- It has appropriate length and a natural closing`;
 }
 
 async function generateGreetingForJob(apiConfig, resumeText, job) {
   const jdText = job.jd?.fullDesc || job.jd?.desc || job.name;
-  const jdKeywords = job.jd?.keywords?.join('、') || '';
+  const jdKeywords = job.jd?.keywords?.join(', ') || '';
 
-  const userPrompt = `【你的简历】
+  const userPrompt = `【Your Resume】
 ${resumeText}
 
-【目标岗位】
-公司：${job.company}
-职位：${job.name}
-薪资：${job.salary || '未标注'}
-${jdKeywords ? 'JD关键词：' + jdKeywords : ''}
+【Target Opportunity】
+Company: ${job.company}
+Position: ${job.name}
+Salary: ${job.salary || 'Not specified'}
+${jdKeywords ? 'JD Keywords: ' + jdKeywords : ''}
 
-【岗位JD详情】
+【Job Description Details】
 ${jdText}
 
-请根据JD中的具体要求，从你的简历中挑选最匹配的经历，写一段个性化招呼语。重点体现你能解决JD中提到的问题，并包含量化成果。`;
+Based on the specific requirements in the JD, pick the most relevant experience from your resume and write a personalized greeting. Focus on how you can solve the problems mentioned in the JD, and include quantified achievements.`;
 
   return AIProvider.call(
     apiConfig.provider,
@@ -160,20 +160,20 @@ async function getApiConfig() {
 async function generateAllGreetingsConcurrent() {
   const apiConfig = await getApiConfig();
   if (!apiConfig.apiKey) {
-    chrome.runtime.sendMessage({ type: 'ERROR', message: '请先在设置页配置 API Key' }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'ERROR', message: 'Please configure your API Key in Settings' }).catch(() => {});
     return;
   }
 
   const resumeText = state.resumeText;
   if (!resumeText) {
-    chrome.runtime.sendMessage({ type: 'ERROR', message: '请先上传简历' }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'ERROR', message: 'Please upload your resume first' }).catch(() => {});
     return;
   }
 
-  // 跳过已成功生成的
+  // Skip already successfully generated greetings
   const jobsToGenerate = state.jobs.filter(j => {
     const existing = state.greetings[j.jobId || j.id];
-    return !existing || existing.includes('生成失败');
+    return !existing || existing.includes('Generation failed');
   });
 
   const total = jobsToGenerate.length;
@@ -201,7 +201,7 @@ async function generateAllGreetingsConcurrent() {
             return;
           } catch (err) {
             if (attempt < 2) continue;
-            state.greetings[jobId] = '生成失败：' + (err.message || '未知错误');
+            state.greetings[jobId] = 'Generation failed: ' + (err.message || 'Unknown error');
           }
         }
       })()
@@ -217,7 +217,7 @@ async function generateAllGreetingsConcurrent() {
   pushState();
 }
 
-// ── 消息路由 ──
+// -- Message routing --
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   switch (msg.type) {
     case 'GET_STATE':
@@ -239,10 +239,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       state.phase = 'ready';
       pushState();
       if (!state.jobs.length) {
-        chrome.runtime.sendMessage({ type: 'ERROR', message: '未找到岗位' }).catch(() => {});
+        chrome.runtime.sendMessage({ type: 'ERROR', message: 'No opportunities found' }).catch(() => {});
         sendResponse({ success: true }); break;
       }
-      // 立即开始 per-JD 招呼语生成
+      // Immediately start per-JD greeting generation
       if (!greetingPromise) greetingPromise = generateAllGreetingsConcurrent();
       sendResponse({ success: true });
       break;
@@ -255,7 +255,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'START_SEND':
       if (sender?.tab?.windowId) state.originalMainWindowId = sender.tab.windowId;
       else chrome.windows.getLastFocused().then(win => { if (win?.id) state.originalMainWindowId = win.id; }).catch(() => {});
-      state.hrActiveFilter = msg.hrActiveFilter || '不限';
+      state.hrActiveFilter = msg.hrActiveFilter || 'any';
       startSendV6(msg.jobIds).then(() => sendResponse({ success: true })).catch(e => {
         chrome.runtime.sendMessage({ type: 'ERROR', message: e.message }).catch(() => {});
         sendResponse({ success: false, error: e.message });
@@ -339,13 +339,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// ── 简历提取 ──
+// -- Resume extraction --
 async function extractResume(data, type) {
   let text = '';
   if (type === 'text') {
     text = data;
   } else if (type === 'pdf') {
-    // PDF 解析在 popup 中完成（需要 PDF.js），这里接收已提取的文本
+    // PDF parsing is done in popup (requires PDF.js); here we receive already-extracted text
     text = data;
   }
   state.resumeText = text;
@@ -353,23 +353,23 @@ async function extractResume(data, type) {
   return text;
 }
 
-// ── 测试招呼语生成 ──
+// -- Test greeting generation --
 async function testGreeting(config) {
   const testJob = {
-    name: '前端开发工程师',
-    company: '测试公司',
+    name: 'Frontend Developer',
+    company: 'Test Company',
     salary: '20-40K',
-    jd: { desc: '负责公司核心产品的前端开发，要求3年以上React经验，熟悉TypeScript，有性能优化经验优先。' },
+    jd: { desc: 'Responsible for core product frontend development. Requires 3+ years of React experience, proficiency in TypeScript. Performance optimization experience preferred.' },
   };
-  return generateGreetingForJob(config, state.resumeText || '暂无简历内容', testJob);
+  return generateGreetingForJob(config, state.resumeText || 'No resume content yet', testJob);
 }
 
-// ── 重新生成单条招呼语 ──
+// -- Regenerate single greeting --
 async function regenerateGreeting(jobId) {
   const apiConfig = await getApiConfig();
-  if (!apiConfig.apiKey) throw new Error('请先配置 API Key');
+  if (!apiConfig.apiKey) throw new Error('Please configure your API Key first');
   const job = state.jobs.find(j => (j.jobId || j.id) === jobId);
-  if (!job) throw new Error('未找到岗位');
+  if (!job) throw new Error('Opportunity not found');
   const greeting = await generateGreetingForJob(apiConfig, state.resumeText, job);
   state.greetings[jobId] = greeting;
   pushState();
@@ -377,7 +377,7 @@ async function regenerateGreeting(jobId) {
 }
 
 // ════════════════════════════════════════════════════════════
-// 采集控制
+// Collection control
 // ════════════════════════════════════════════════════════════
 
 async function startCollect(params) {
@@ -391,9 +391,9 @@ async function startCollect(params) {
   if (params?.urlParams) state.searchUrlParams = params.urlParams;
   pushState();
 
-  // 预热招呼语生成（如果简历已上传）
+  // Pre-warm greeting generation (if resume is already uploaded)
   if (state.resumeText && !greetingPromise) {
-    // 等采集完成后生成
+    // Will generate after collection completes
   }
 
   try {
@@ -425,7 +425,7 @@ async function stopCollect() {
 }
 
 // ════════════════════════════════════════════════════════════
-// v6 发送编排
+// v6 Send orchestration
 // ════════════════════════════════════════════════════════════
 
 function buildJobUrl(params) {
@@ -477,10 +477,10 @@ async function startSendV6(jobIds) {
   if (!searchTabs.length) {
     state.phase = 'idle'; state.sendPhase = '';
     await persistState();
-    throw new Error('未找到BOSS直聘搜索页');
+    throw new Error('BOSS Zhipin search page not found');
   }
 
-  // Stage 1: 批量提取 HR 信息
+  // Stage 1: Batch extract HR information
   for (const tab of searchTabs) {
     if (sendAborted) break;
     const remaining = state.sendQueueV6.filter(item => !item.hrName).length;
@@ -496,7 +496,7 @@ async function startSendV6(jobIds) {
   if (sendAborted) return;
   await sleep(CONFIG.POST_EXTRACT_DELAY_MS);
 
-  // 过滤提取失败 + 已沟通过
+  // Filter out extraction failures + already contacted
   state.sendQueueV6 = state.sendQueueV6.filter(item => item.hrName);
   const skippedAlready = state.sendQueueV6.filter(item => item.alreadyChatted);
   state.sendQueueV6 = state.sendQueueV6.filter(item => !item.alreadyChatted);
@@ -509,14 +509,14 @@ async function startSendV6(jobIds) {
   if (!state.sendQueueV6.length) { await finalizeTask('done'); return; }
   if (sendAborted) return;
 
-  // Stage 2: 并行发送
+  // Stage 2: Parallel sending
   state.sendPhase = 'stage2';
   state.sendProgress.total = state.sendQueueV6.length;
   await persistState();
   await runStage2();
   if (sendAborted) return;
 
-  // Stage 3: 补发
+  // Stage 3: Repair pass
   await teardownWorkerWindows();
   await sleep(3000);
   if (sendAborted) return;
@@ -526,7 +526,7 @@ async function startSendV6(jobIds) {
 }
 
 async function resumeSendV6() {
-  // 清理残留
+  // Clean up remnants
   for (const wid of (state._v6WorkerWindowIds || [])) try { await chrome.windows.remove(wid); } catch (_) {}
   state._v6WorkerWindowIds = [];
   for (const tid of state._v6WorkerTabIds) try { await chrome.tabs.remove(tid); } catch (_) {}
@@ -559,12 +559,12 @@ async function resumeSendV6() {
   await finishSend();
 }
 
-// ── Stage 1: 批量提取 HR ──
+// -- Stage 1: Batch HR extraction --
 async function runStage1() {
   await waitForContentScript(state.searchTabId);
   return new Promise((resolve, reject) => {
     let timedOut = false, settled = false;
-    const timeout = setTimeout(() => { timedOut = true; settled = true; reject(new Error('Stage1 超时')); }, 120000);
+    const timeout = setTimeout(() => { timedOut = true; settled = true; reject(new Error('Stage 1 timeout')); }, 120000);
 
     abortStage1 = () => { if (settled) return; settled = true; clearTimeout(timeout); resolve(); };
 
@@ -582,14 +582,14 @@ async function runStage1() {
             const qit = idx >= 0 ? state.sendQueueV6[idx] : null;
             sentJobIds.add(s.jobId);
             state.sendProgress.sent++;
-            state.sendResults.push({ jobId: s.jobId, positionName: qit?.positionName || '', companyName: qit?.companyName || '', success: false, skipped: true, error: 'HR活跃不符' + (s.activeDesc ? '（' + s.activeDesc + '）' : ''), time: Date.now() });
+            state.sendResults.push({ jobId: s.jobId, positionName: qit?.positionName || '', companyName: qit?.companyName || '', success: false, skipped: true, error: 'HR activity mismatch' + (s.activeDesc ? ' (' + s.activeDesc + ')' : ''), time: Date.now() });
             if (idx >= 0) state.sendQueueV6.splice(idx, 1);
           }
           pushState();
         }
         resolve();
       } else if (msg.type === MSG.EXTRACT_PROGRESS && sender.tab?.id === state.searchTabId) {
-        chrome.runtime.sendMessage({ type: MSG.SEND_PROGRESS, sent: msg.extracted, total: msg.total, status: '正在提取HR信息' }).catch(() => {});
+        chrome.runtime.sendMessage({ type: MSG.SEND_PROGRESS, sent: msg.extracted, total: msg.total, status: 'Extracting HR information...' }).catch(() => {});
       }
     };
     chrome.runtime.onMessage.addListener(handler);
@@ -604,7 +604,7 @@ async function runStage1() {
   });
 }
 
-// ── Stage 2: 并行发送 ──
+// -- Stage 2: Parallel sending --
 async function runStage2() {
   const workerCount = Math.min(CONFIG.MAX_SEND_WORKERS, state.sendQueueV6.length);
   state._v6WorkerTabIds = [];
@@ -619,7 +619,7 @@ async function runStage2() {
     if (workerTab?.id != null) state._v6WorkerTabIds.push(workerTab.id);
   }
 
-  // 等所有 worker 就绪
+  // Wait for all workers to be ready
   await new Promise(resolve => {
     const check = () => {
       if (state._v6WorkerTabsReady.size >= workerCount) { resolve(); return; }
@@ -646,7 +646,7 @@ async function runWorkerLoop(tabId) {
         if (sendAborted) break;
         const findResp = await chrome.tabs.sendMessage(tabId, { type: MSG.WORKER_ACTIVATE, job });
         if (!findResp?.success) {
-          await recordV6Failure(job, findResp?.error || '未找到对话', 'findConv');
+          await recordV6Failure(job, findResp?.error || 'Conversation not found', 'findConv');
           state._v6RepairQueue.push(job);
           continue;
         }
@@ -655,11 +655,11 @@ async function runWorkerLoop(tabId) {
         const sendResp = await chrome.tabs.sendMessage(tabId, { type: MSG.WORKER_SEND, job });
         if (sendResp?.success) await recordV6Success(job);
         else {
-          await recordV6Failure(job, sendResp?.error || '发送失败', sendResp?.skipped === 'image' ? 'sendImage' : 'sendText');
+          await recordV6Failure(job, sendResp?.error || 'Send failed', sendResp?.skipped === 'image' ? 'sendImage' : 'sendText');
           state._v6RepairQueue.push(job);
         }
       } catch (e) {
-        await recordV6Failure(job, '通信失败: ' + e.message, 'worker_comm');
+        await recordV6Failure(job, 'Communication failed: ' + e.message, 'worker_comm');
         state._v6RepairQueue.push(job);
       }
 
@@ -671,7 +671,7 @@ async function runWorkerLoop(tabId) {
   }
 }
 
-// ── 补发 ──
+// -- Repair pass --
 async function runRepairV6() {
   if (state.phase !== 'sending') return;
   const queue = (state._v6RepairQueue || []).slice();
@@ -701,7 +701,7 @@ async function runRepairV6() {
       if (state.phase !== 'sending') break;
       let resp;
       try { resp = await chrome.tabs.sendMessage(repairTabId, { type: MSG.WORKER_REPAIR, job }); } catch (e) {
-        resp = { complete: false, error: '通信失败: ' + e.message };
+        resp = { complete: false, error: 'Communication failed: ' + e.message };
       }
       await applyRepairResult(job, resp, pass + 1);
       if (!(resp?.complete) && resp?.foundConv !== false) still.push(job);
@@ -723,14 +723,14 @@ async function applyRepairResult(job, resp, pass) {
       state.sendResults[i].success = ok;
       state.sendResults[i].repaired = true;
       if (ok) { state.sendResults[i].error = null; state.sendResults[i].stage = null; }
-      else state.sendResults[i].error = resp?.error || 'repair未补全';
+      else state.sendResults[i].error = resp?.error || 'Repair incomplete';
       break;
     }
   }
   pushState();
 }
 
-// ── 记录结果 ──
+// -- Record results --
 async function recordV6Success(item) {
   sentJobIds.add(item.jobId);
   state.sendProgress.sent++;
@@ -747,14 +747,14 @@ async function recordV6Failure(item, error, stage) {
   chrome.runtime.sendMessage({ type: MSG.SEND_ITEM_RESULT, payload: { jobId: item.jobId, positionName: item.positionName, companyName: item.companyName, success: false, error } }).catch(() => {});
 }
 
-// ── 终态 ──
+// -- Final state --
 async function finalizeTask(reason) {
   const recorded = {};
   for (const r of state.sendResults) if (r?.jobId != null) recorded[r.jobId] = true;
   for (const it of [...(state.sendQueueV6 || []), ...(state._v6RepairQueue || [])]) {
     if (!it?.jobId || recorded[it.jobId]) continue;
     recorded[it.jobId] = true;
-    state.sendResults.push({ jobId: it.jobId, positionName: it.positionName || '', companyName: it.companyName || '', success: false, skipped: true, error: reason === 'stopped' ? '未投递：已停止' : '未投递', time: Date.now() });
+    state.sendResults.push({ jobId: it.jobId, positionName: it.positionName || '', companyName: it.companyName || '', success: false, skipped: true, error: reason === 'stopped' ? 'Not sent: stopped' : 'Not sent', time: Date.now() });
   }
   state.sendProgress.total = state.sendResults.length;
   state.sendPhase = '';
@@ -786,7 +786,7 @@ async function stopSend() {
   await persistState();
 }
 
-// ── Worker keepalive ──
+// -- Worker keepalive --
 const _workerAlarmPrefix = 'bg:worker_keepalive:';
 const _activeWorkerKeepalives = new Set();
 
@@ -813,7 +813,7 @@ chrome.alarms.onAlarm.addListener(alarm => {
   chrome.tabs.sendMessage(tabId, { type: MSG.PING }).catch(() => {});
 });
 
-// ── 清理 ──
+// -- Cleanup --
 async function teardownWorkerWindows() {
   if (!state._v6WorkerTabIds.length && !state._v6WorkerWindowIds.length) return;
   stopAllWorkerKeepalives();
@@ -837,12 +837,12 @@ async function cleanupV6() {
   }
 }
 
-// ── 辅助 ──
+// -- Helpers --
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function waitForTabLoad(tabId, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => { chrome.tabs.onUpdated.removeListener(listener); reject(new Error('页面加载超时')); }, timeoutMs);
+    const timeout = setTimeout(() => { chrome.tabs.onUpdated.removeListener(listener); reject(new Error('Page load timeout')); }, timeoutMs);
     function listener(updatedTabId, changeInfo) {
       if (updatedTabId === tabId && changeInfo.status === 'complete') {
         clearTimeout(timeout); chrome.tabs.onUpdated.removeListener(listener); resolve();
@@ -867,7 +867,7 @@ async function waitForContentScript(tabId, timeoutMs = 3000, maxRetries = 3) {
   throw new Error('Content script not ready');
 }
 
-// ── 通知所有 CS 停止 ──
+// -- Notify all content scripts to stop --
 async function notifyAllStop() {
   const tabs = await chrome.tabs.query({ url: '*://*.zhipin.com/*' });
   tabs.forEach(t => chrome.tabs.sendMessage(t.id, { type: 'DO_STOP' }).catch(() => {}));

@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════
-// BossGreet — 统一常量（单一真相源）
+// BossGreet — Unified Constants (Single Source of Truth)
 // ════════════════════════════════════════════════════════════
 
 const MSG = {
@@ -36,7 +36,7 @@ const MSG = {
   DO_STOP: 'DO_STOP',
   PING: 'PING',
 
-  // v6 发送架构
+  // Send architecture
   DO_BATCH_EXTRACT: 'DO_BATCH_EXTRACT',
   EXTRACT_PROGRESS: 'EXTRACT_PROGRESS',
   EXTRACT_COMPLETE: 'EXTRACT_COMPLETE',
@@ -89,15 +89,14 @@ const CONFIG = {
   FILL_SETTLE_MS: 700,
   IMG_UPLOAD_TIMEOUT_MS: 15000,
   KEEPALIVE_PERIOD_MIN: 0.5,
-  // JD 提取相关
   JD_FETCH_TIMEOUT_MS: 10000,
   JD_MIN_LENGTH: 50,
 };
 
-// AI 提供商配置模板
+// AI provider configuration templates
 const AI_PROVIDERS = {
   qwen: {
-    name: '阿里云百炼 (Qwen)',
+    name: 'Alibaba Qwen (DashScope)',
     endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
     defaultModel: 'qwen-plus',
     headers(apiKey) {
@@ -112,12 +111,12 @@ const AI_PROVIDERS = {
       };
     },
     parseContent(data) {
-      if (!data.choices || !data.choices.length) throw new Error('API 返回空结果');
+      if (!data.choices || !data.choices.length) throw new Error('Empty API response');
       return data.choices[0].message.content;
     },
   },
   mimo: {
-    name: '小米 MiMo (DashScope)',
+    name: 'Xiaomi MiMo (DashScope)',
     endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
     defaultModel: 'xiaomi/mimo-v2.5-pro',
     headers(apiKey) {
@@ -132,7 +131,7 @@ const AI_PROVIDERS = {
       };
     },
     parseContent(data) {
-      if (!data.choices || !data.choices.length) throw new Error('API 返回空结果');
+      if (!data.choices || !data.choices.length) throw new Error('Empty API response');
       return data.choices[0].message.content;
     },
   },
@@ -152,7 +151,7 @@ const AI_PROVIDERS = {
       };
     },
     parseContent(data) {
-      if (!data.choices || !data.choices.length) throw new Error('API 返回空结果');
+      if (!data.choices || !data.choices.length) throw new Error('Empty API response');
       return data.choices[0].message.content;
     },
   },
@@ -168,7 +167,6 @@ const AI_PROVIDERS = {
       };
     },
     buildBody(model, messages, opts) {
-      // Claude 抽出 system 单独传
       const systemMsg = messages.find(m => m.role === 'system');
       const otherMsgs = messages.filter(m => m.role !== 'system');
       const body = {
@@ -181,7 +179,7 @@ const AI_PROVIDERS = {
       return body;
     },
     parseContent(data) {
-      if (!data.content || !data.content.length) throw new Error('API 返回空结果');
+      if (!data.content || !data.content.length) throw new Error('Empty API response');
       return data.content[0].text;
     },
   },

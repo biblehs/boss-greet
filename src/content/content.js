@@ -1,21 +1,21 @@
 // ════════════════════════════════════════════════════════════
-// BossGreet — Content Script 入口
-// 根据 URL 路由 + 消息监听
+// BossGreet — Content Script Entry Point
+// URL routing + message listener
 // ════════════════════════════════════════════════════════════
 
-// ── 安全发送：SW 未激活时 sendMessage 抛同步错误，.catch() 捕获不了 ──
+// Safe send: chrome.runtime.sendMessage throws synchronously when SW is inactive
 function safeSend(msg) {
   try {
     chrome.runtime.sendMessage(msg, () => {
-      if (chrome.runtime.lastError) { /* SW 未就绪，忽略 */ }
+      if (chrome.runtime.lastError) { /* SW not ready, ignore */ }
     });
-  } catch (_) { /* chrome.runtime 不可用，忽略 */ }
+  } catch (_) { /* chrome.runtime unavailable, ignore */ }
 }
 
 (async () => {
   const href = window.location.href;
 
-  // ── 消息监听 ──
+  // Message listener
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === MSG.PING) {
       sendResponse({ type: MSG.PONG });
@@ -77,24 +77,24 @@ function safeSend(msg) {
     }
   });
 
-  // ── 路由初始化 ──
+  // Route initialization
   if (href.includes('/web/geek/jobs')) {
-    console.log('[BossGreet] 岗位搜索页已就绪');
+    console.log('[BossGreet] Search page ready');
   } else if (href.includes('/web/geek/chat')) {
     if (typeof ChatMonitor !== 'undefined') ChatMonitor.start();
-    console.log('[BossGreet] 聊天页已就绪');
+    console.log('[BossGreet] Chat page ready');
   } else if (href.includes('/job_detail/')) {
-    console.log('[BossGreet] 岗位详情页已就绪');
+    console.log('[BossGreet] Detail page ready');
   }
 
-  // ── 通知 SW：CS 就绪 ──
+  // Notify SW: CS is ready
   let role = '';
   if (href.includes('/web/geek/jobs')) role = 'search';
   else if (href.includes('/web/geek/chat')) role = 'worker';
   safeSend({ type: MSG.CS_READY, url: href, role });
 })();
 
-// ── 岗位采集 ──
+// Opportunity collection
 async function handleCollect(params) {
   const result = await runCollection(params, progress => {
     safeSend({ type: MSG.COLLECT_PROGRESS, ...progress });
@@ -108,10 +108,9 @@ async function handleCollect(params) {
   return result;
 }
 
-// ── 单个 JD 提取（从详情页）──
+// Single JD fetch (from search panel)
 async function handleFetchJD(jobId, jobLink) {
   if (typeof JDExtractor === 'undefined') return { desc: '' };
-  // 在当前页（搜索页右侧面板已展开）尝试提取
   const panelData = JDExtractor.extractFromPanel();
   if (panelData?.complete) {
     return { desc: panelData.desc, tags: panelData.tags, fromPanel: true };
@@ -119,7 +118,7 @@ async function handleFetchJD(jobId, jobLink) {
   return { desc: panelData?.desc || '', tags: panelData?.tags || [], fromPanel: true };
 }
 
-// ── v6: 批量提取 HR 信息 + JD ──
+// Batch extract recruiter info + JD
 async function handleBatchExtract(msg) {
   const queue = msg.queue || [];
   if (typeof JobCollector !== 'undefined') JobCollector.stopped = false;
@@ -134,7 +133,6 @@ async function handleBatchExtract(msg) {
     const item = queue[i];
 
     try {
-      // 找到卡片并点击
       const card = document.querySelector(`li.job-card-box a[href*="${item.jobId}"]`)?.closest('li.job-card-box');
       if (!card) continue;
 
@@ -143,10 +141,8 @@ async function handleBatchExtract(msg) {
       card.click();
       await new Promise(r => setTimeout(r, 1500));
 
-      // 提取面板信息（HR + JD）
       const panelData = JDExtractor.extractFromPanel();
       if (panelData?.hrName) {
-        // HR 活跃筛选
         if (panelData.activity && !passActivityFilter(msg.hrActiveFilter, panelData.activity)) {
           skipped.push({ jobId: item.jobId, activeDesc: panelData.activity.desc });
           continue;
@@ -162,7 +158,6 @@ async function handleBatchExtract(msg) {
         });
       }
 
-      // 检测验证码
       if (typeof detectCaptcha === 'function' && detectCaptcha().detected) {
         captchaDetected = true;
         safeSend({ type: MSG.CAPTCHA_DETECTED });
@@ -186,26 +181,25 @@ async function handleBatchExtract(msg) {
   return { success: true, results, skipped, captchaDetected };
 }
 
-// ── v6: Worker 激活（找对话 + 进入）──
+// Worker activate: find conversation + enter
 async function handleWorkerActivate(msg) {
   const job = msg.job || {};
-  if (!job.hrName) return { success: false, jobId: job.jobId, error: 'HR名称为空' };
+  if (!job.hrName) return { success: false, jobId: job.jobId, error: 'Recruiter name is empty' };
   if (typeof JobSender !== 'undefined' && JobSender.stopped) return { success: false, stopped: true };
 
   const listContainer = await waitForElement('.user-list-content', 10000);
-  if (!listContainer) return { success: false, jobId: job.jobId, error: '对话列表容器未加载' };
+  if (!listContainer) return { success: false, jobId: job.jobId, error: 'Conversation list not loaded' };
 
   let conversation = findChatConversation(job.hrName, job.hrCompany);
   for (let retry = 0; retry < 12 && !conversation; retry++) {
     await new Promise(r => setTimeout(r, 500));
     conversation = findChatConversation(job.hrName, job.hrCompany);
   }
-  if (!conversation) return { success: false, jobId: job.jobId, error: '未找到对话' };
+  if (!conversation) return { success: false, jobId: job.jobId, error: 'Conversation not found' };
 
   conversation.click();
   await new Promise(r => setTimeout(r, 2000));
 
-  // 等输入框出现
   let chatLoaded = false;
   for (let w = 0; w < 50; w++) {
     await new Promise(r => setTimeout(r, 200));
@@ -219,13 +213,13 @@ async function handleWorkerActivate(msg) {
       break;
     }
   }
-  if (!chatLoaded) return { success: false, jobId: job.jobId, error: '对话未加载' };
+  if (!chatLoaded) return { success: false, jobId: job.jobId, error: 'Chat detail not loaded' };
 
   await closeBlockingDialogs(3);
   return { success: true, jobId: job.jobId };
 }
 
-// ── v6: Worker 发送 ──
+// Worker send greeting
 async function handleWorkerSend(msg) {
   const job = msg.job || {};
   try {
@@ -239,12 +233,12 @@ async function handleWorkerSend(msg) {
   }
 }
 
-// ── v6: 补发 ──
+// Worker repair: re-enter conversation and verify/fix
 async function handleWorkerRepair(msg) {
   const job = msg.job || {};
   const act = await handleWorkerActivate(msg);
   if (!act?.success) {
-    return { complete: false, foundConv: false, jobId: job.jobId, error: act?.error || '补发时未找到对话' };
+    return { complete: false, foundConv: false, jobId: job.jobId, error: act?.error || 'Conversation not found during repair' };
   }
   await new Promise(r => setTimeout(r, 1500));
   try {

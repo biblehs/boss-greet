@@ -1,4 +1,4 @@
-// BossGreet — Popup 辅助函数
+// BossGreet — Popup helper functions
 function $(sel) { return document.querySelector(sel); }
 function $$(sel) { return document.querySelectorAll(sel); }
 

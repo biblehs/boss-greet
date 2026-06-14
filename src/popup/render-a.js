@@ -1,6 +1,6 @@
-// BossGreet — A 页渲染（配置）
+// BossGreet — Page A rendering (Settings)
 function renderA() {
-  // 恢复表单值
+  // Restore form values
   const config = PopupState.apiConfig;
   $('#aiProvider').value = config.provider || 'mimo';
   if (config.apiKey) $('#apiKey').value = config.apiKey;
@@ -12,7 +12,7 @@ function renderA() {
   if (fs.experience) $('#experienceSelect').value = fs.experience;
   if (fs.hrActiveFilter) $('#hrActiveFilter').value = fs.hrActiveFilter;
 
-  // 简历状态
+  // Resume status
   updateResumeStatus();
 }
 
@@ -25,15 +25,15 @@ function updateResumeStatus() {
     const textPreview = $('#resume-text-preview');
 
     if (text) {
-      statusEl.textContent = `已上传简历文本（${text.length} 字）`;
+      statusEl.textContent = `Resume text uploaded (${text.length} chars)`;
       statusEl.style.color = '#2ecc71';
       previewEl.style.display = 'block';
       textPreview.textContent = text.slice(0, 500) + (text.length > 500 ? '...' : '');
     } else if (images.length) {
-      statusEl.textContent = `已上传 ${images.length} 张简历图片`;
+      statusEl.textContent = `${images.length} resume image(s) uploaded`;
       statusEl.style.color = '#2ecc71';
     } else {
-      statusEl.textContent = '未上传简历';
+      statusEl.textContent = 'No resume uploaded';
       statusEl.style.color = '';
       previewEl.style.display = 'none';
     }

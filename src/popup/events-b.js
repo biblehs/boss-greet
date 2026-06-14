@@ -1,6 +1,6 @@
-// BossGreet — B 页事件绑定（投递页）
+// BossGreet — Page B event bindings (Outreach)
 function bindEventsB() {
-  // ── 开始采集 ──
+  // Start collecting
   $('#btnStartCollect')?.addEventListener('click', async () => {
     const fs = PopupState.filterState;
     const params = {
@@ -11,31 +11,31 @@ function bindEventsB() {
       },
       hrActiveFilter: fs.hrActiveFilter,
     };
-    if (!fs.keyword) { showToast('请输入搜索关键词'); return; }
+    if (!fs.keyword) { showToast('Please enter search keywords'); return; }
     try {
       await sendMessage({ type: 'START_COLLECT', params });
     } catch (err) {
-      showToast('采集启动失败: ' + err.message);
+      showToast('Collection failed: ' + err.message);
     }
   });
 
-  // ── 停止采集 ──
+  // Stop collecting
   $('#btnStopCollect')?.addEventListener('click', async () => {
     try { await sendMessage({ type: 'STOP_COLLECT' }); } catch (_) {}
   });
 
-  // ── 一键投递 ──
+  // Send all greetings
   $('#btnStartSend')?.addEventListener('click', async () => {
     const state = PopupState.swState;
-    if (!state?.jobs?.length) { showToast('没有可投递的岗位'); return; }
+    if (!state?.jobs?.length) { showToast('No opportunities to send greetings to'); return; }
 
-    // 检查招呼语是否都生成完了
+    // Check if all greetings have been generated
     const missing = state.jobs.filter(j => {
       const g = state.greetings?.[j.jobId || j.id];
-      return !g || g.includes('生成失败');
+      return !g || g.includes('Generation failed');
     });
     if (missing.length) {
-      showToast(`${missing.length} 条招呼语尚未生成，请等待`);
+      showToast(`${missing.length} greeting(s) not yet generated, please wait`);
       return;
     }
 
@@ -43,16 +43,16 @@ function bindEventsB() {
     try {
       await sendMessage({ type: 'START_SEND', jobIds, hrActiveFilter: PopupState.filterState.hrActiveFilter });
     } catch (err) {
-      showToast('投递启动失败: ' + err.message);
+      showToast('Send failed: ' + err.message);
     }
   });
 
-  // ── 停止投递 ──
+  // Stop sending
   $('#btnStopSend')?.addEventListener('click', async () => {
     try { await sendMessage({ type: 'STOP_SEND' }); } catch (_) {}
   });
 
-  // ── 编辑招呼语（事件委托）──
+  // Edit greeting (event delegation)
   document.addEventListener('click', e => {
     const editBtn = e.target.closest('.btn-edit-greeting');
     if (editBtn) {
@@ -73,7 +73,7 @@ function bindEventsB() {
       const card = saveBtn.closest('.greeting-box');
       const textarea = card.querySelector('.greeting-edit');
       const newGreeting = textarea.value.trim();
-      if (!newGreeting) { showToast('招呼语不能为空'); return; }
+      if (!newGreeting) { showToast('Greeting cannot be empty'); return; }
       sendMessage({ type: 'UPDATE_GREETING', jobId, greeting: newGreeting });
       textarea.style.display = 'none';
       const textEl = card.querySelector('.greeting-text');
@@ -88,10 +88,10 @@ function bindEventsB() {
     const regenBtn = e.target.closest('.btn-regen-greeting');
     if (regenBtn) {
       const jobId = regenBtn.dataset.jobId;
-      regenBtn.textContent = '生成中...';
+      regenBtn.textContent = 'Generating...';
       regenBtn.disabled = true;
       sendMessage({ type: 'REGENERATE_GREETING', jobId }).then(resp => {
-        regenBtn.textContent = '重新生成';
+        regenBtn.textContent = 'Regenerate';
         regenBtn.disabled = false;
         if (resp?.success) {
           const card = regenBtn.closest('.greeting-box');
@@ -100,17 +100,17 @@ function bindEventsB() {
           textEl.textContent = resp.greeting;
           textEl.style.color = '';
           card.querySelector('.greeting-edit').value = resp.greeting;
-        } else showToast('生成失败: ' + (resp?.error || ''));
+        } else showToast('Generation failed: ' + (resp?.error || ''));
       }).catch(err => {
-        regenBtn.textContent = '重新生成';
+        regenBtn.textContent = 'Regenerate';
         regenBtn.disabled = false;
-        showToast('生成失败: ' + err.message);
+        showToast('Generation failed: ' + err.message);
       });
       return;
     }
   });
 
-  // ── 重新投递 ──
+  // Send again
   $('#btnRedo')?.addEventListener('click', () => {
     showPage('b');
   });

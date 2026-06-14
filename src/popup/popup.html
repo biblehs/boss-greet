@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,128 +8,128 @@
 </head>
 <body>
   <div id="app">
-    <!-- 顶部导航 -->
+    <!-- Top navigation -->
     <header id="topBar">
       <div class="logo">BossGreet</div>
       <nav id="nav">
-        <button class="nav-btn active" data-page="a">配置</button>
-        <button class="nav-btn" data-page="b">投递</button>
-        <button class="nav-btn" data-page="review">结果</button>
+        <button class="nav-btn active" data-page="a">Settings</button>
+        <button class="nav-btn" data-page="b">Outreach</button>
+        <button class="nav-btn" data-page="review">Results</button>
       </nav>
     </header>
 
-    <!-- A 页：配置 -->
+    <!-- Page A: Settings -->
     <main id="page-a" class="page active">
       <section class="section">
-        <h3>📄 简历</h3>
+        <h3>Resume</h3>
         <div id="resume-upload-area">
           <div class="upload-row">
             <label class="upload-btn">
-              上传 PDF 简历
+              Upload PDF Resume
               <input type="file" id="resumePdfInput" accept=".pdf" hidden>
             </label>
             <label class="upload-btn secondary">
-              上传图片简历
+              Upload Image Resume
               <input type="file" id="resumeImgInput" accept="image/*" multiple hidden>
             </label>
           </div>
-          <div id="resume-status" class="status-text">未上传简历</div>
+          <div id="resume-status" class="status-text">No resume uploaded</div>
           <div id="resume-preview" class="resume-preview" style="display:none">
             <pre id="resume-text-preview"></pre>
           </div>
           <div class="manual-input">
-            <textarea id="resumeTextInput" placeholder="或直接粘贴简历文本..." rows="4"></textarea>
-            <button id="saveResumeText" class="btn-small">保存文本</button>
+            <textarea id="resumeTextInput" placeholder="Or paste your resume text here..." rows="4"></textarea>
+            <button id="saveResumeText" class="btn-small">Save Text</button>
           </div>
         </div>
       </section>
 
       <section class="section">
-        <h3>🤖 AI 配置</h3>
+        <h3>AI Configuration</h3>
         <div class="form-group">
-          <label>提供商</label>
+          <label>Provider</label>
           <select id="aiProvider">
-            <option value="mimo">小米 MiMo (默认)</option>
-            <option value="qwen">阿里云百炼 (Qwen)</option>
+            <option value="mimo">Xiaomi MiMo (Default)</option>
+            <option value="qwen">Alibaba Cloud (Qwen)</option>
             <option value="openai">OpenAI (GPT)</option>
             <option value="claude">Anthropic (Claude)</option>
           </select>
         </div>
         <div class="form-group">
           <label>API Key</label>
-          <input type="password" id="apiKey" placeholder="输入你的 API Key">
+          <input type="password" id="apiKey" placeholder="Enter your API Key">
         </div>
         <div class="form-group">
-          <label>模型</label>
-          <input type="text" id="aiModel" placeholder="默认: xiaomi/mimo-v2.5-pro">
+          <label>Model</label>
+          <input type="text" id="aiModel" placeholder="Default: xiaomi/mimo-v2.5-pro">
         </div>
         <div class="btn-row">
-          <button id="saveApiConfig" class="btn-primary">保存配置</button>
-          <button id="testApi" class="btn-secondary">测试连接</button>
+          <button id="saveApiConfig" class="btn-primary">Save Settings</button>
+          <button id="testApi" class="btn-secondary">Test Connection</button>
         </div>
         <div id="api-test-result" class="status-text"></div>
       </section>
 
       <section class="section">
-        <h3>🔍 职位筛选</h3>
+        <h3>Opportunity Filters</h3>
         <div class="form-group">
-          <label>目标城市</label>
+          <label>Target City</label>
           <select id="citySelect">
-            <option value="101280600">深圳</option>
-            <option value="101010100">北京</option>
-            <option value="101020100">上海</option>
-            <option value="101270100">广州</option>
-            <option value="101210100">杭州</option>
-            <option value="101030100">天津</option>
-            <option value="101110100">西安</option>
-            <option value="101190400">苏州</option>
-            <option value="101200100">武汉</option>
-            <option value="101230100">厦门</option>
-            <option value="101250100">长沙</option>
-            <option value="101270100">成都</option>
-            <option value="000000">全国</option>
+            <option value="101280600">Shenzhen</option>
+            <option value="101010100">Beijing</option>
+            <option value="101020100">Shanghai</option>
+            <option value="101270100">Guangzhou</option>
+            <option value="101210100">Hangzhou</option>
+            <option value="101030100">Tianjin</option>
+            <option value="101110100">Xian</option>
+            <option value="101190400">Suzhou</option>
+            <option value="101200100">Wuhan</option>
+            <option value="101230100">Xiamen</option>
+            <option value="101250100">Changsha</option>
+            <option value="101270100">Chengdu</option>
+            <option value="000000">Nationwide</option>
           </select>
         </div>
         <div class="form-group">
-          <label>搜索关键词</label>
-          <input type="text" id="searchKeyword" placeholder="如：前端开发">
+          <label>Search Keywords</label>
+          <input type="text" id="searchKeyword" placeholder="e.g. Frontend Developer">
         </div>
         <div class="form-group">
-          <label>经验要求</label>
+          <label>Experience Level</label>
           <select id="experienceSelect">
-            <option value="">不限</option>
-            <option value="103">应届生</option>
-            <option value="104">1-3年</option>
-            <option value="105">3-5年</option>
-            <option value="106">5-10年</option>
-            <option value="107">10年以上</option>
+            <option value="">Any</option>
+            <option value="103">Fresh Graduate</option>
+            <option value="104">1-3 Years</option>
+            <option value="105">3-5 Years</option>
+            <option value="106">5-10 Years</option>
+            <option value="107">10+ Years</option>
           </select>
         </div>
         <div class="form-group">
-          <label>HR 活跃筛选</label>
+          <label>HR Activity Filter</label>
           <select id="hrActiveFilter">
-            <option value="不限">不限</option>
-            <option value="只投在线">只投在线</option>
-            <option value="3日内活跃">3日内活跃</option>
-            <option value="本周内活跃">本周内活跃</option>
-            <option value="本月内活跃">本月内活跃</option>
+            <option value="any">Any</option>
+            <option value="online">Online Only</option>
+            <option value="3d">Active in 3 Days</option>
+            <option value="7d">Active This Week</option>
+            <option value="30d">Active This Month</option>
           </select>
         </div>
       </section>
     </main>
 
-    <!-- B 页：投递 -->
+    <!-- Page B: Outreach -->
     <main id="page-b" class="page">
       <div id="b-empty" class="empty-state">
-        <p>还没有采集岗位</p>
-        <p>请先在「配置」页设置筛选条件</p>
+        <p>No opportunities collected yet</p>
+        <p>Set your filters on the Settings page first</p>
       </div>
       <div id="b-content" style="display:none">
         <div class="toolbar">
           <span id="job-count"></span>
           <div class="btn-row">
-            <button id="btnStartCollect" class="btn-primary">开始采集</button>
-            <button id="btnStopCollect" class="btn-danger" style="display:none">停止</button>
+            <button id="btnStartCollect" class="btn-primary">Start Collecting</button>
+            <button id="btnStopCollect" class="btn-danger" style="display:none">Stop</button>
           </div>
         </div>
         <div id="greeting-progress" class="progress-bar" style="display:none">
@@ -138,45 +138,45 @@
         </div>
         <div id="job-groups"></div>
         <div class="bottom-bar">
-          <button id="btnStartSend" class="btn-primary btn-large">一键投递</button>
+          <button id="btnStartSend" class="btn-primary btn-large">Send All Greetings</button>
         </div>
       </div>
 
-      <!-- 发送中 -->
+      <!-- Sending in progress -->
       <div id="b-sending" style="display:none">
         <div class="sending-status">
           <div class="spinner"></div>
-          <p id="sending-status-text">正在投递...</p>
+          <p id="sending-status-text">Sending greetings...</p>
         </div>
         <div class="progress-bar">
           <div class="progress-fill" id="sendProgressFill"></div>
           <span class="progress-text" id="sendProgressText"></span>
         </div>
         <div id="send-log"></div>
-        <button id="btnStopSend" class="btn-danger">停止投递</button>
+        <button id="btnStopSend" class="btn-danger">Stop Sending</button>
       </div>
     </main>
 
-    <!-- Review 页 -->
+    <!-- Review page -->
     <main id="page-review" class="page">
       <div id="review-empty" class="empty-state">
-        <p>暂无投递结果</p>
+        <p>No outreach results yet</p>
       </div>
       <div id="review-content" style="display:none">
         <div class="review-stats">
-          <div class="stat"><span class="stat-num" id="statSuccess">0</span><span>成功</span></div>
-          <div class="stat"><span class="stat-num" id="statFailed">0</span><span>失败</span></div>
-          <div class="stat"><span class="stat-num" id="statTotal">0</span><span>总计</span></div>
-          <div class="stat"><span class="stat-num" id="statDuration">0s</span><span>耗时</span></div>
+          <div class="stat"><span class="stat-num" id="statSuccess">0</span><span>Sent</span></div>
+          <div class="stat"><span class="stat-num" id="statFailed">0</span><span>Failed</span></div>
+          <div class="stat"><span class="stat-num" id="statTotal">0</span><span>Total</span></div>
+          <div class="stat"><span class="stat-num" id="statDuration">0s</span><span>Duration</span></div>
         </div>
         <div id="review-list"></div>
         <div class="bottom-bar">
-          <button id="btnRedo" class="btn-primary btn-large">重新投递</button>
+          <button id="btnRedo" class="btn-primary btn-large">Send Again</button>
         </div>
       </div>
     </main>
 
-    <!-- 全局错误提示 -->
+    <!-- Global error toast -->
     <div id="error-toast" class="toast" style="display:none"></div>
   </div>
 

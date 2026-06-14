@@ -1,13 +1,17 @@
 // ════════════════════════════════════════════════════════════
-// BossGreet — 聊天页发送模块
-// 文字招呼语 + 简历图片，含投递确认和防双发
+// BossGreet — Message Sender Module
+// Text greeting + resume image, with delivery confirmation
 // ════════════════════════════════════════════════════════════
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-// ── 元素等待 ──
+function _safeSendSender(msg) {
+  try { chrome.runtime.sendMessage(msg, () => { if (chrome.runtime.lastError) {} }); } catch (_) {}
+}
+
+// Wait for element to appear
 async function waitForElement(selectors, timeoutMs = 5000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -22,7 +26,7 @@ async function waitForElement(selectors, timeoutMs = 5000) {
   return null;
 }
 
-// ── 投递确认：轮询 .message-status ──
+// Delivery confirmation: poll .message-status
 async function waitForDeliveryStatus(timeoutMs, baselineCount, expectText) {
   const deadline = Date.now() + timeoutMs;
   const norm = s => (s || '').replace(/\s+/g, '');
@@ -44,7 +48,7 @@ async function waitForDeliveryStatus(timeoutMs, baselineCount, expectText) {
   return 'timeout';
 }
 
-// ── 图片投递确认：等 CDN URL + status-delivery ──
+// Image delivery confirmation: wait for CDN URL + status-delivery
 async function waitForImageDelivered(timeoutMs, baselineCount) {
   const deadline = Date.now() + timeoutMs;
   let seen = 'none';
@@ -94,7 +98,7 @@ function findDeliveredTextBubble(bc, expectText) {
   return false;
 }
 
-// ── 关闭弹窗 ──
+// Close blocking dialogs
 async function closeBlockingDialogs(maxRounds = 3) {
   for (let round = 0; round < maxRounds; round++) {
     await sleep(400);
@@ -114,11 +118,11 @@ async function closeBlockingDialogs(maxRounds = 3) {
   return false;
 }
 
-// ── HR 活跃度筛选 ──
+// Activity filter
 function passActivityFilter(filter, act) {
-  if (!filter || filter === '不限') return true;
-  if (filter === '只投在线') return act.online === true;
-  const maxMap = { '3日内活跃': 3, '本周内活跃': 7, '本月内活跃': 30 };
+  if (!filter || filter === 'any' || filter === '不限') return true;
+  if (filter === 'online' || filter === '只投在线') return act.online === true;
+  const maxMap = { '3d': 3, '7d': 7, '30d': 30, '3日内活跃': 3, '本周内活跃': 7, '本月内活跃': 30 };
   const max = maxMap[filter];
   if (max == null) return true;
   if (act.online) return true;
@@ -126,7 +130,7 @@ function passActivityFilter(filter, act) {
   return act.activeDays <= max;
 }
 
-// ── 对话查找 ──
+// Find conversation in chat list
 function findChatConversation(hrName, hrCompany) {
   const items = document.querySelectorAll('.user-list-content li, .friend-content-warp');
   hrName = (hrName || '').trim();
@@ -147,7 +151,6 @@ function findChatConversation(hrName, hrCompany) {
       }
     }
   }
-  // fallback: 只按名字
   for (let j = 0; j < items.length; j++) {
     const nEl = items[j].querySelector('.name-text');
     if (nEl && (nEl.textContent.trim().includes(hrName) || hrName === nEl.textContent.trim())) {
@@ -157,7 +160,7 @@ function findChatConversation(hrName, hrCompany) {
   return null;
 }
 
-// ── Data URL → Blob ──
+// Data URL → Blob
 function dataUrlToBlob(dataUrl) {
   const parts = dataUrl.split(',');
   const mimeMatch = parts[0].match(/:(.*?);/);
@@ -170,40 +173,36 @@ function dataUrlToBlob(dataUrl) {
 }
 
 // ════════════════════════════════════════════════════════════
-// JobSender 主体
+// JobSender — Main send logic
 // ════════════════════════════════════════════════════════════
-function _safeSendSender(msg) {
-  try { chrome.runtime.sendMessage(msg, () => { if (chrome.runtime.lastError) {} }); } catch (_) {}
-}
-
 const JobSender = {
   stopped: false,
 
-  // ── 发送文字招呼语（单次）──
+  // Send text greeting (single attempt)
   async _sendTextOnce(greeting, baselineOverride, timeoutMsOverride) {
     if (!greeting?.trim()) return { success: false, error: 'greeting_empty', status: 'error' };
 
     const input = await waitForElement(SELECTORS.chatDetail.chatInput, 10000);
-    if (!input) return { success: false, error: '未找到聊天输入框', status: 'error' };
+    if (!input) return { success: false, error: 'Chat input not found', status: 'error' };
 
     const sendBtn = await waitForElement(SELECTORS.chatDetail.btnSend, 2000);
-    if (!sendBtn) return { success: false, error: '未找到发送按钮', status: 'error' };
+    if (!sendBtn) return { success: false, error: 'Send button not found', status: 'error' };
 
     const freshInput = await waitForElement(SELECTORS.chatDetail.chatInput, 2000);
-    if (!freshInput) return { success: false, error: '未找到聊天输入框', status: 'error' };
+    if (!freshInput) return { success: false, error: 'Chat input not found', status: 'error' };
 
     freshInput.focus();
     freshInput.textContent = greeting;
     freshInput.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: greeting }));
 
-    if (!freshInput.textContent?.trim()) return { success: false, error: '文字未能填入输入框', status: 'error' };
+    if (!freshInput.textContent?.trim()) return { success: false, error: 'Text not filled into input', status: 'error' };
 
     await sleep(CONFIG.FILL_SETTLE_MS);
     const enabled = !sendBtn.classList.contains('disabled') && !sendBtn.disabled;
     if (!enabled) {
       await sleep(200);
       if (!(!sendBtn.classList.contains('disabled') && !sendBtn.disabled)) {
-        return { success: false, error: 'btn-send 未激活', status: 'error' };
+        return { success: false, error: 'Send button not activated', status: 'error' };
       }
     }
 
@@ -220,7 +219,7 @@ const JobSender = {
     return { success: false, error: 'text_delivery_timeout', status: 'timeout' };
   },
 
-  // ── 发送文字（含重试）──
+  // Send text with retry
   async sendText(greeting, opts = {}) {
     if (!greeting?.trim()) return { success: false, error: 'greeting_empty', status: 'error' };
     const maxAttempts = opts.maxAttempts || 3;
@@ -234,14 +233,14 @@ const JobSender = {
         if (findDeliveredTextBubble(origBaseline, greeting)) return { success: true, status: 'delivery' };
       }
       try { last = await this._sendTextOnce(greeting, origBaseline, opts.timeoutMs); } catch (e) {
-        last = { success: false, error: 'sendText异常: ' + e.message, status: 'error' };
+        last = { success: false, error: 'sendText error: ' + e.message, status: 'error' };
       }
       if (last?.success) return last;
     }
     return last || { success: false, status: 'timeout' };
   },
 
-  // ── 发送图片（单次）──
+  // Send image (single attempt)
   async _sendImageOnce(blob, filename, jobId, baselineOverride, timeoutMsOverride) {
     const file = new File([blob], filename || 'resume.jpg', { type: 'image/jpeg' });
     const dt = new DataTransfer();
@@ -252,7 +251,7 @@ const JobSender = {
       fileInput = document.querySelector(SELECTORS.chatDetail.imageUpload);
       if (!fileInput) await sleep(500);
     }
-    if (!fileInput) throw new Error('未找到图片上传入口');
+    if (!fileInput) throw new Error('Image upload input not found');
 
     const baselineCount = (typeof baselineOverride === 'number')
       ? baselineOverride
@@ -269,7 +268,7 @@ const JobSender = {
     return { success: r.status === 'delivery', status: r.status };
   },
 
-  // ── 发送图片（含重试）──
+  // Send image with retry
   async sendImage(blob, filename, jobId, opts = {}) {
     const maxAttempts = opts.maxAttempts || 3;
     const retryDelayMs = opts.retryDelayMs || 1200;
@@ -282,30 +281,27 @@ const JobSender = {
         if (findDeliveredImageBubble(origBaseline)) return { success: true, status: 'delivery' };
       }
       try { last = await this._sendImageOnce(blob, filename, jobId, origBaseline, opts.timeoutMs); } catch (e) {
-        last = { success: false, error: 'sendImage异常: ' + e.message, status: 'error' };
+        last = { success: false, error: 'sendImage error: ' + e.message, status: 'error' };
       }
       if (last?.status === 'delivery') return { success: true, status: 'delivery' };
     }
     return last || { success: false, status: 'timeout' };
   },
 
-  // ── 发送单个岗位（招呼语 + 简历图片）──
+  // Send single greeting + resume image
   async sendSingle(greeting, jobId, imgOpts, textOpts) {
     if (this.stopped) return { success: false, stopped: true, error: 'stopped' };
 
-    // 1. 发文字
     let textResult;
     try { textResult = await this.sendText(greeting, textOpts); } catch (e) {
-      textResult = { success: false, error: 'sendText异常: ' + e.message };
+      textResult = { success: false, error: 'sendText error: ' + e.message };
     }
     if (!textResult.success) return textResult;
     if (this.stopped) return { success: false, stopped: true, error: 'stopped' };
     await sleep(500);
 
-    // 2. 发图片
     const imgRet = await this._sendResumeImages(jobId, imgOpts);
 
-    // 3. 检测验证码
     if (typeof detectCaptcha === 'function' && detectCaptcha().detected) {
       _safeSendSender({ type: 'CAPTCHA_DETECTED' });
       return { success: false, error: 'captcha', captchaDetected: true };
@@ -315,7 +311,7 @@ const JobSender = {
     return { success: true };
   },
 
-  // ── 发送简历图片 ──
+  // Send resume images
   async _sendResumeImages(jobId, imgOpts) {
     let imagesData = null;
     try {
@@ -354,7 +350,7 @@ const JobSender = {
     return { imageFailed, imageError, attempted };
   },
 
-  // ── 补发：核对服务器历史 ──
+  // Verify greeting exists in server history
   hasTextInHistory(expectText) {
     const norm = s => (s || '').replace(/\s+/g, '');
     const fp = norm(expectText).slice(0, 16);
@@ -366,6 +362,7 @@ const JobSender = {
     return false;
   },
 
+  // Verify image exists in server history
   hasImageInHistory() {
     const items = document.querySelectorAll(SELECTORS.chatDetail.messageSent);
     for (const item of items) {
@@ -375,6 +372,7 @@ const JobSender = {
     return false;
   },
 
+  // Repair: verify history, send missing content
   async repairSingle(greeting, jobId, imgOpts, textOpts) {
     const hadText = greeting ? this.hasTextInHistory(greeting) : true;
     const hadImage = this.hasImageInHistory();

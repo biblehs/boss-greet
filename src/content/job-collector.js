@@ -1,16 +1,16 @@
 // ════════════════════════════════════════════════════════════
-// BossGreet — 岗位采集模块
-// DOM 解析 + 无限滚动 + JD 提取
+// BossGreet — Opportunity Collector Module
+// DOM parsing + infinite scroll + JD extraction
 // ════════════════════════════════════════════════════════════
 
 const JobCollector = {
-  collected: new Map(), // id → job
+  collected: new Map(),
   stopped: false,
   scrollDelay: 1500,
   maxPages: 20,
 
   /**
-   * 解析单个岗位卡片
+   * Parse a single opportunity card
    */
   parseCard(card) {
     const nameEl = card.querySelector(SELECTORS.jobs.jobName);
@@ -29,12 +29,12 @@ const JobCollector = {
       tags,
       link,
       jobLink: link,
-      jd: null, // 稍后由 JD 提取填充
+      jd: null,
     };
   },
 
   /**
-   * 解析当前页所有卡片
+   * Parse all cards on current page
    */
   parseCurrentPage() {
     const cards = document.querySelectorAll(SELECTORS.jobs.jobCard);
@@ -50,12 +50,11 @@ const JobCollector = {
   },
 
   /**
-   * 无限滚动加载
+   * Infinite scroll loading
    */
   async scrollToLoad(progressCb) {
     this.stopped = false;
 
-    // 等首批卡片渲染
     const cardSelector = SELECTORS.jobs.jobCard;
     const waitStart = Date.now();
     while (Date.now() - waitStart < 10000) {
@@ -90,8 +89,7 @@ const JobCollector = {
   },
 
   /**
-   * 逐个点击卡片提取 JD（搜索页右侧面板）
-   * 这是核心改动：即投不提取 JD，我们逐个提取
+   * Extract JDs by clicking each card (right-side panel)
    */
   async extractJDsFromPanel(progressCb) {
     const jobs = [...this.collected.values()];
@@ -102,16 +100,14 @@ const JobCollector = {
       const job = jobs[i];
 
       try {
-        // 找到该岗位的卡片并点击
         const card = this._findCardByJobId(job.id);
         if (!card) continue;
 
         card.scrollIntoView({ block: 'center', behavior: 'instant' });
         await sleep(300);
         card.click();
-        await sleep(1500); // 等右侧面板展开
+        await sleep(1500);
 
-        // 提取 JD
         const panelData = JDExtractor.extractFromPanel();
         if (panelData && panelData.desc) {
           job.jd = {
@@ -130,7 +126,7 @@ const JobCollector = {
           progressCb({ jdExtracted: extracted, jdTotal: jobs.length, current: job.name });
         }
       } catch (e) {
-        console.warn('[BossGreet] JD 提取失败:', job.name, e.message);
+        console.warn('[BossGreet] JD extraction failed:', job.name, e.message);
       }
     }
 
@@ -151,15 +147,15 @@ const JobCollector = {
   },
 };
 
-// ── 收集入口 ──
+// Collection entry point
 async function runCollection(params, progressCb) {
   JobCollector.collected.clear();
 
-  // Phase 1: 滚动采集所有岗位卡片
+  // Phase 1: Scroll and collect all opportunity cards
   await JobCollector.scrollToLoad(progressCb);
   const jobs = [...JobCollector.collected.values()];
 
-  // Phase 2: 逐个点击提取 JD（核心改动）
+  // Phase 2: Extract JD from each card's panel
   if (progressCb) progressCb({ phase: 'jd_extract', total: jobs.length });
   await JobCollector.extractJDsFromPanel(progressCb);
 

@@ -1,4 +1,4 @@
-// BossGreet — B 页渲染（投递）
+// BossGreet — Page B rendering (Outreach)
 function renderB(state) {
   if (!state) return;
 
@@ -6,7 +6,7 @@ function renderB(state) {
     $('#b-empty').style.display = 'none';
     $('#b-content').style.display = 'none';
     $('#b-sending').style.display = 'block';
-    $('#sending-status-text').textContent = '正在采集岗位...';
+    $('#sending-status-text').textContent = 'Collecting opportunities...';
     return;
   }
 
@@ -29,21 +29,21 @@ function renderB(state) {
   $('#b-empty').style.display = 'none';
   $('#b-content').style.display = 'block';
 
-  // 岗位数量
-  $('#job-count').textContent = `${state.jobs.length} 个岗位`;
+  // Opportunity count
+  $('#job-count').textContent = `${state.jobs.length} opportunities`;
 
-  // 招呼语生成进度
+  // Greeting generation progress
   if (state.greetingProgress && state.greetingProgress.total > 0) {
     const gp = state.greetingProgress;
     const pct = gp.total > 0 ? Math.round((gp.done / gp.total) * 100) : 0;
     $('#greeting-progress').style.display = 'block';
     $('#greetingProgressFill').style.width = pct + '%';
-    $('#greetingProgressText').textContent = `生成招呼语 ${gp.done}/${gp.total}`;
+    $('#greetingProgressText').textContent = `Generating greetings ${gp.done}/${gp.total}`;
   } else {
     $('#greeting-progress').style.display = 'none';
   }
 
-  // 岗位列表
+  // Opportunity list
   renderJobList(state);
 }
 
@@ -54,7 +54,7 @@ function renderJobList(state) {
   for (const job of state.jobs) {
     const jobId = job.jobId || job.id;
     const greeting = state.greetings?.[jobId] || '';
-    const greetingStatus = greeting.includes('生成失败') ? 'fail'
+    const greetingStatus = greeting.includes('Generation failed') ? 'fail'
       : greeting ? 'ok' : 'pending';
 
     const card = document.createElement('div');
@@ -73,13 +73,13 @@ function renderJobList(state) {
           ? `<div class="greeting-text">${esc(greeting)}</div>`
           : greetingStatus === 'fail'
             ? `<div class="greeting-text" style="color:var(--danger)">${esc(greeting)}</div>`
-            : `<div class="greeting-text" style="color:var(--text-muted)">招呼语生成中...</div>`
+            : `<div class="greeting-text" style="color:var(--text-muted)">Generating greeting...</div>`
         }
         <textarea class="greeting-edit" style="display:none" data-job-id="${jobId}">${esc(greeting)}</textarea>
         <div class="greeting-actions">
-          <button class="btn-small btn-edit-greeting" data-job-id="${jobId}">编辑</button>
-          <button class="btn-small btn-save-greeting" data-job-id="${jobId}" style="display:none">保存</button>
-          <button class="btn-small btn-regen-greeting" data-job-id="${jobId}">重新生成</button>
+          <button class="btn-small btn-edit-greeting" data-job-id="${jobId}">Edit</button>
+          <button class="btn-small btn-save-greeting" data-job-id="${jobId}" style="display:none">Save</button>
+          <button class="btn-small btn-regen-greeting" data-job-id="${jobId}">Regenerate</button>
         </div>
       </div>
     `;
@@ -95,10 +95,10 @@ function renderSending(state) {
 
   const phase = state.sendPhase || '';
   const phaseText = {
-    stage1: '正在提取 HR 信息...',
-    stage2: '正在并行发送...',
-    '': '正在投递...',
-  }[phase] || '正在投递...';
+    stage1: 'Extracting HR information...',
+    stage2: 'Sending in parallel...',
+    '': 'Sending greetings...',
+  }[phase] || 'Sending greetings...';
   $('#sending-status-text').textContent = phaseText;
 }
 

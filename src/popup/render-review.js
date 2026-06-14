@@ -1,4 +1,4 @@
-// BossGreet — Review 页渲染
+// BossGreet — Review page rendering
 function renderReview(state) {
   if (!state) return;
 
@@ -12,7 +12,7 @@ function renderReview(state) {
   $('#review-empty').style.display = 'none';
   $('#review-content').style.display = 'block';
 
-  // 统计
+  // Stats
   const success = results.filter(r => r.success).length;
   const failed = results.filter(r => !r.success && !r.skipped).length;
   const total = results.length;
@@ -21,7 +21,7 @@ function renderReview(state) {
   $('#statTotal').textContent = total;
   $('#statDuration').textContent = formatDuration(state.sendDuration);
 
-  // 列表
+  // List
   const list = $('#review-list');
   list.innerHTML = '';
   for (const r of results) {
@@ -32,7 +32,7 @@ function renderReview(state) {
       <div class="review-item-name">${esc(r.positionName || r.jobId)}</div>
       <div class="review-item-company">${esc(r.companyName || '')} ${r.hrName ? '| ' + esc(r.hrName) : ''}</div>
       ${r.error ? `<div class="review-item-error">${esc(r.error)}</div>` : ''}
-      ${r.alreadyChatted ? '<div class="review-item-error" style="color:var(--text-muted)">已沟通过</div>' : ''}
+      ${r.alreadyChatted ? '<div class="review-item-error" style="color:var(--text-muted)">Already contacted</div>' : ''}
     `;
     list.appendChild(item);
   }

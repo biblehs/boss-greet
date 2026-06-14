@@ -1,4 +1,4 @@
-// BossGreet — Popup 状态管理
+// BossGreet — Popup state management
 const PopupState = {
   page: 'a',
   swState: null,
@@ -7,11 +7,11 @@ const PopupState = {
     city: '101280600',
     keyword: '',
     experience: '',
-    hrActiveFilter: '不限',
+    hrActiveFilter: 'any',
   },
 
   init() {
-    // 从 storage 恢复 filter 状态
+    // Restore filter state from storage
     chrome.storage.local.get('ui:filterState', result => {
       if (result['ui:filterState']) {
         Object.assign(this.filterState, result['ui:filterState']);

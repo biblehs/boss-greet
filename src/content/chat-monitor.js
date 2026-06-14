@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════
-// BossGreet — 聊天监听模块
-// MutationObserver 监听 HR 消息，关键词触发自动回复简历
+// BossGreet — Chat Monitor Module
+// MutationObserver for HR messages, auto-reply with resume
 // ════════════════════════════════════════════════════════════
 
 function _safeSendCS(msg) {
@@ -10,7 +10,7 @@ function _safeSendCS(msg) {
 const ChatMonitor = {
   observer: null,
   enabled: false,
-  resumeKeywords: ['简历', '附件', 'PDF', 'pdf', '清晰', '文件', '发我', '发一份', '发个', '再发', '详细的'],
+  resumeKeywords: ['resume', 'CV', 'attachment', 'PDF', 'pdf', 'send me', 'details', '简历', '附件', '发我'],
 
   start() {
     if (this.observer) return;

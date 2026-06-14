@@ -1,20 +1,20 @@
 // ════════════════════════════════════════════════════════════
-// BossGreet — PDF 简历文本提取
-// 在 Service Worker 中运行，使用 OffscreenCanvas + PDF.js
+// BossGreet — PDF Resume Text Extraction
+// Runs in Service Worker using OffscreenCanvas + PDF.js
 // ════════════════════════════════════════════════════════════
 
 /**
- * 从 PDF 文件的 ArrayBuffer 提取纯文本
- * 注意：在 SW 中不能用 importScripts 加载 ESM，需要通过 offscreen document
- * 这里提供一个 fallback：直接用 chrome.offscreen 或 fetch + 解码
+ * Extract plain text from a PDF file's ArrayBuffer
+ * Note: cannot use importScripts to load ESM in SW, needs offscreen document
+ * Provides a fallback: uses chrome.offscreen or fetch + decode
  */
 async function extractPdfText(arrayBuffer) {
-  // 方案1：尝试用 PDF.js（如果已加载）
+  // Method 1: Try using PDF.js if loaded
   if (typeof pdfjsLib !== 'undefined') {
     return extractWithPdfJs(arrayBuffer);
   }
 
-  // 方案2：简单文本提取（不依赖 PDF.js，对纯文本 PDF 有效）
+  // Method 2: Simple text extraction (no PDF.js dependency, works for plain text PDFs)
   return extractSimpleText(arrayBuffer);
 }
 
@@ -31,20 +31,20 @@ async function extractWithPdfJs(arrayBuffer) {
 }
 
 /**
- * 简单文本提取 fallback — 直接从 PDF 二进制流中提取可读文本
- * 对纯文本 PDF 有效，对扫描件无效
+ * Simple text extraction fallback — extracts readable text directly from the PDF binary stream
+ * Works for plain text PDFs, does not work for scanned documents
  */
 function extractSimpleText(arrayBuffer) {
   const bytes = new Uint8Array(arrayBuffer);
   let text = '';
   let inStream = false;
 
-  // PDF 文本通常在 stream...endstream 之间，用 BT/ET 标记文本块
-  // 简化提取：找所有可打印 ASCII 序列
+  // PDF text is typically between stream...endstream, marked by BT/ET text blocks
+  // Simplified extraction: find all printable ASCII sequences
   const decoder = new TextDecoder('utf-8', { fatal: false });
   const raw = decoder.decode(bytes);
 
-  // 提取 Tj/TJ 操作符中的文本
+  // Extract text from Tj/TJ operators
   const tjPattern = /\(([^)]{2,})\)\s*Tj/g;
   const tjArrayPattern = /\[(.*?)\]\s*TJ/g;
   let match;
@@ -54,7 +54,7 @@ function extractSimpleText(arrayBuffer) {
     texts.push(match[1]);
   }
   while ((match = tjArrayPattern.exec(raw)) !== null) {
-    // TJ 数组中提取括号内的字符串
+    // Extract strings inside parentheses from the TJ array
     const inner = match[1];
     const strMatches = inner.match(/\(([^)]*)\)/g);
     if (strMatches) {
@@ -66,7 +66,7 @@ function extractSimpleText(arrayBuffer) {
     return texts.join('\n').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '').trim();
   }
 
-  // 最终 fallback：提取连续可打印字符段
+  // Final fallback: extract consecutive printable character segments
   const printable = raw.replace(/[^\x20-\x7E一-鿿　-〿＀-￯\n\r]/g, ' ');
   const segments = printable.split(/\s{3,}/).filter(s => s.trim().length > 10);
   return segments.join('\n').trim();

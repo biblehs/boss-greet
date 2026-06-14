@@ -1,22 +1,22 @@
 // ════════════════════════════════════════════════════════════
-// BossGreet — 多模型 AI 抽象层
+// BossGreet — Multi-Model AI Abstraction Layer
 // ════════════════════════════════════════════════════════════
 
 const AIProvider = {
   /**
-   * 调用 AI API（统一接口）
-   * @param {string} provider - 'qwen' | 'openai' | 'claude'
+   * Call AI API (unified interface)
+   * @param {string} provider - 'qwen' | 'mimo' | 'openai' | 'claude'
    * @param {string} apiKey
    * @param {string} model
    * @param {Array} messages - [{role: 'system'|'user'|'assistant', content: string}]
    * @param {Object} opts - {maxTokens, temperature, timeoutMs}
-   * @returns {Promise<string>} AI 返回的文本
+   * @returns {Promise<string>} AI response text
    */
   async call(provider, apiKey, model, messages, opts = {}) {
     const p = AI_PROVIDERS[provider];
-    if (!p) throw new Error('不支持的 AI 提供商: ' + provider);
+    if (!p) throw new Error('Unsupported provider: ' + provider);
     apiKey = (apiKey || '').trim();
-    if (!apiKey) throw new Error('请先配置 API Key');
+    if (!apiKey) throw new Error('Please configure your API Key first');
 
     const timeoutMs = opts.timeoutMs || 30000;
     const controller = new AbortController();
@@ -33,7 +33,7 @@ const AIProvider = {
 
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
-        throw new Error(`API 错误 ${resp.status}: ${errText.substring(0, 200)}`);
+        throw new Error(`API Error ${resp.status}: ${errText.substring(0, 200)}`);
       }
 
       const data = await resp.json();
@@ -41,18 +41,18 @@ const AIProvider = {
     } catch (err) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
-        throw new Error(`请求超时（${timeoutMs / 1000}秒），请检查网络`);
+        throw new Error(`Request timed out (${timeoutMs / 1000}s), please check your network`);
       }
       throw err;
     }
   },
 
   /**
-   * 测试 API 连通性
+   * Test API connectivity
    */
   async test(provider, apiKey, model) {
     return this.call(provider, apiKey, model, [
-      { role: 'user', content: '你好，请回复"连接成功"' },
+      { role: 'user', content: 'Hello, please reply "Connection successful"' },
     ], { maxTokens: 20, timeoutMs: 10000 });
   },
 };

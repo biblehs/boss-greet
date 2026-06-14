@@ -1,6 +1,6 @@
-// BOSS 直聘 DOM 选择器集中管理
+// BOSS Zhipin DOM Selectors — Centralized Management
 const SELECTORS = {
-  // ── 岗位搜索页 /web/geek/jobs ──
+  // Job search page /web/geek/jobs
   jobs: {
     jobCard: 'li.job-card-box',
     jobName: '.job-name',
@@ -16,7 +16,7 @@ const SELECTORS = {
     immediateChatBtn: 'a.op-btn-chat',
   },
 
-  // ── 搜索页右侧详情面板（点击卡片后展开）──
+  // Right-side detail panel (opens after clicking a card)
   jobPanel: {
     container: '.job-detail-container, .detail-content, .job-detail-box',
     jobDesc: '.job-sec-text, .job-detail .text',
@@ -28,7 +28,7 @@ const SELECTORS = {
     bossActive: '.boss-active-time',
   },
 
-  // ── JD 详情页 /job_detail/{id}.html ──
+  // Job detail page /job_detail/{id}.html
   jobDetail: {
     container: '.job-detail',
     jobSecText: '.job-sec-text',
@@ -38,14 +38,14 @@ const SELECTORS = {
     tags: '.tag-list li, .job-tags span',
   },
 
-  // ── 聊天列表页 /web/geek/chat ──
+  // Chat list page /web/geek/chat
   chatList: {
     userList: '.user-list-content li',
     unreadLabel: '.label-name',
     friendContent: '.friend-content',
   },
 
-  // ── 聊天详情页 ──
+  // Chat detail page
   chatDetail: {
     chatInput: 'div#chat-input.chat-input',
     btnSend: 'button.btn-send',
@@ -60,7 +60,7 @@ const SELECTORS = {
   },
 };
 
-// ── CAPTCHA 检测选择器 ──
+// CAPTCHA detection selectors
 const CAPTCHA_SELECTORS = [
   '.captcha-box', '.verify-box', '.geetest_box', '#captcha',
   '.yoda-modal', '.nc_wrapper', '[class*="captcha"]',

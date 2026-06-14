@@ -1,27 +1,27 @@
-// BossGreet — A 页事件绑定（配置页）
+// BossGreet — Page A event bindings (Settings)
 function bindEventsA() {
-  // ── PDF 简历上传 ──
+  // PDF resume upload
   $('#resumePdfInput')?.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
     try {
       const arrayBuffer = await file.arrayBuffer();
-      // 用 popup 内的 PDF.js 提取文本（通过 offscreen 或直接解析）
+      // Extract text with PDF.js in popup (via offscreen or direct parsing)
       const text = await extractPdfInPopup(arrayBuffer);
       if (text) {
         await sendMessage({ type: 'EXTRACT_RESUME', data: text, type: 'text' });
         updateResumeStatus();
-        showToast('PDF 简历解析成功', 2000);
+        showToast('PDF resume parsed successfully', 2000);
       } else {
-        showToast('PDF 解析失败，请手动粘贴文本');
+        showToast('PDF parsing failed, please paste text manually');
       }
     } catch (err) {
-      showToast('PDF 解析错误: ' + err.message);
+      showToast('PDF parsing error: ' + err.message);
     }
     e.target.value = '';
   });
 
-  // ── 图片简历上传 ──
+  // Image resume upload
   $('#resumeImgInput')?.addEventListener('change', async e => {
     const files = [...e.target.files];
     if (!files.length) return;
@@ -31,64 +31,64 @@ function bindEventsA() {
       const bytes = dataUrlToBytes(dataUrl);
       images.push({ name: file.name, type: file.type, data: bytes, id: Date.now() + '_' + Math.random().toString(36).slice(2, 6), thumb: dataUrl, fullSrc: dataUrl });
     }
-    // 合并到已有图片
+    // Merge with existing images
     const { 'ui:resumeImages': existing = [] } = await new Promise(r => chrome.storage.local.get('ui:resumeImages', r));
     const merged = [...existing, ...images].slice(0, 5);
     chrome.storage.local.set({ 'ui:resumeImages': merged });
     updateResumeStatus();
-    showToast(`已上传 ${images.length} 张图片`, 2000);
+    showToast(`${images.length} image(s) uploaded`, 2000);
     e.target.value = '';
   });
 
-  // ── 手动粘贴简历文本 ──
+  // Manual paste resume text
   $('#saveResumeText')?.addEventListener('click', async () => {
     const text = $('#resumeTextInput').value.trim();
-    if (!text) { showToast('请输入简历文本'); return; }
+    if (!text) { showToast('Please enter resume text'); return; }
     await sendMessage({ type: 'EXTRACT_RESUME', data: text, type: 'text' });
     updateResumeStatus();
-    showToast('简历文本已保存', 2000);
+    showToast('Resume text saved', 2000);
   });
 
-  // ── 保存 API 配置 ──
+  // Save API configuration
   $('#saveApiConfig')?.addEventListener('click', async () => {
     const config = {
       provider: $('#aiProvider').value,
       apiKey: $('#apiKey').value.trim(),
       model: $('#aiModel').value.trim(),
     };
-    if (!config.apiKey) { showToast('请输入 API Key'); return; }
+    if (!config.apiKey) { showToast('Please enter an API Key'); return; }
     await sendMessage({ type: 'SAVE_API_CONFIG', config });
     PopupState.apiConfig = config;
-    showToast('配置已保存', 2000);
+    showToast('Settings saved', 2000);
   });
 
-  // ── 测试 API 连接 ──
+  // Test API connection
   $('#testApi')?.addEventListener('click', async () => {
     const config = {
       provider: $('#aiProvider').value,
       apiKey: $('#apiKey').value.trim(),
       model: $('#aiModel').value.trim(),
     };
-    if (!config.apiKey) { showToast('请先输入 API Key'); return; }
+    if (!config.apiKey) { showToast('Please enter an API Key first'); return; }
     const resultEl = $('#api-test-result');
-    resultEl.textContent = '测试中...';
+    resultEl.textContent = 'Testing...';
     resultEl.style.color = '';
     try {
       const resp = await sendMessage({ type: 'TEST_GREETING', config });
       if (resp?.success) {
-        resultEl.textContent = '连接成功！示例输出: ' + (resp.result || '').slice(0, 80) + '...';
+        resultEl.textContent = 'Connected! Sample output: ' + (resp.result || '').slice(0, 80) + '...';
         resultEl.style.color = '#2ecc71';
       } else {
-        resultEl.textContent = '失败: ' + (resp?.error || '未知错误');
+        resultEl.textContent = 'Failed: ' + (resp?.error || 'Unknown error');
         resultEl.style.color = '#e74c3c';
       }
     } catch (err) {
-      resultEl.textContent = '错误: ' + err.message;
+      resultEl.textContent = 'Error: ' + err.message;
       resultEl.style.color = '#e74c3c';
     }
   });
 
-  // ── 筛选条件变更 → 自动保存 ──
+  // Filter changes -> auto-save
   ['#citySelect', '#searchKeyword', '#experienceSelect', '#hrActiveFilter'].forEach(sel => {
     $(sel)?.addEventListener('change', () => {
       PopupState.filterState.city = $('#citySelect').value;
@@ -100,10 +100,10 @@ function bindEventsA() {
   });
 }
 
-// ── PDF 解析（popup 中运行）──
+// PDF parsing (runs in popup)
 async function extractPdfInPopup(arrayBuffer) {
   try {
-    // 尝试用 PDF.js（如果可用）
+    // Try using PDF.js if available
     if (typeof pdfjsLib !== 'undefined') {
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       let text = '';
@@ -116,7 +116,7 @@ async function extractPdfInPopup(arrayBuffer) {
     }
   } catch (_) {}
 
-  // fallback: 简单文本提取
+  // Fallback: simple text extraction
   const decoder = new TextDecoder('utf-8', { fatal: false });
   const raw = decoder.decode(new Uint8Array(arrayBuffer));
   const texts = [];

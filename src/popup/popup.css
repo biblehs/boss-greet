@@ -1,4 +1,4 @@
-/* BossGreet — Side Panel 样式 */
+/* BossGreet — Side Panel Styles */
 :root {
   --bg: #1a1a2e;
   --bg-card: #16213e;
@@ -27,7 +27,7 @@ body {
 
 #app { display: flex; flex-direction: column; min-height: 100vh; }
 
-/* ── 顶部导航 ── */
+/* -- Top navigation -- */
 header {
   display: flex;
   align-items: center;
@@ -60,11 +60,11 @@ nav { display: flex; gap: 4px; }
 .nav-btn:hover { background: var(--bg-hover); color: var(--text); }
 .nav-btn.active { background: var(--primary); color: #fff; }
 
-/* ── 页面切换 ── */
+/* -- Page switching -- */
 .page { display: none; padding: 16px; flex: 1; overflow-y: auto; }
 .page.active { display: block; }
 
-/* ── Section ── */
+/* -- Section -- */
 .section {
   background: var(--bg-card);
   border-radius: var(--radius);
@@ -79,7 +79,7 @@ nav { display: flex; gap: 4px; }
   color: var(--primary);
 }
 
-/* ── 表单 ── */
+/* -- Form -- */
 .form-group {
   margin-bottom: 12px;
 }
@@ -116,7 +116,7 @@ nav { display: flex; gap: 4px; }
   font-family: inherit;
 }
 
-/* ── 按钮 ── */
+/* -- Buttons -- */
 .btn-primary {
   background: var(--primary);
   color: #fff;
@@ -177,7 +177,7 @@ nav { display: flex; gap: 4px; }
   margin-top: 8px;
 }
 
-/* ── 上传区 ── */
+/* -- Upload area -- */
 .upload-row {
   display: flex;
   gap: 8px;
@@ -206,7 +206,7 @@ nav { display: flex; gap: 4px; }
   gap: 8px;
 }
 
-/* ── 简历预览 ── */
+/* -- Resume preview -- */
 .resume-preview {
   margin-top: 8px;
   background: var(--bg);
@@ -230,7 +230,7 @@ nav { display: flex; gap: 4px; }
   margin-top: 8px;
 }
 
-/* ── 工具栏 ── */
+/* -- Toolbar -- */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -240,7 +240,7 @@ nav { display: flex; gap: 4px; }
 
 .toolbar span { font-size: 13px; color: var(--text-muted); }
 
-/* ── 进度条 ── */
+/* -- Progress bar -- */
 .progress-bar {
   position: relative;
   background: var(--bg-card);
@@ -268,7 +268,7 @@ nav { display: flex; gap: 4px; }
   white-space: nowrap;
 }
 
-/* ── 岗位卡片 ── */
+/* -- Opportunity cards -- */
 .job-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -343,7 +343,7 @@ nav { display: flex; gap: 4px; }
   margin-top: 6px;
 }
 
-/* ── 空状态 ── */
+/* -- Empty state -- */
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -352,7 +352,7 @@ nav { display: flex; gap: 4px; }
 
 .empty-state p { margin-bottom: 8px; }
 
-/* ── 发送状态 ── */
+/* -- Sending status -- */
 .sending-status {
   text-align: center;
   padding: 20px;
@@ -385,7 +385,7 @@ nav { display: flex; gap: 4px; }
 .send-log-item.success { color: var(--success); }
 .send-log-item.fail { color: var(--danger); }
 
-/* ── Review 统计 ── */
+/* -- Review stats -- */
 .review-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -413,7 +413,7 @@ nav { display: flex; gap: 4px; }
   color: var(--text-muted);
 }
 
-/* ── 底部栏 ── */
+/* -- Bottom bar -- */
 .bottom-bar {
   position: sticky;
   bottom: 0;
@@ -421,7 +421,7 @@ nav { display: flex; gap: 4px; }
   background: var(--bg);
 }
 
-/* ── Toast ── */
+/* -- Toast -- */
 .toast {
   position: fixed;
   bottom: 20px;
@@ -441,7 +441,7 @@ nav { display: flex; gap: 4px; }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* ── Review 列表项 ── */
+/* -- Review list items -- */
 .review-item {
   background: var(--bg-card);
   border: 1px solid var(--border);
