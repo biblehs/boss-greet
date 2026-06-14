@@ -327,7 +327,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return true;
 
     case 'EXTRACT_RESUME':
-      extractResume(msg.data, msg.type).then(text => sendResponse({ success: true, text })).catch(e => sendResponse({ success: false, error: e.message }));
+      extractResume(msg.data, msg.format || 'text').then(text => sendResponse({ success: true, text })).catch(e => sendResponse({ success: false, error: e.message }));
       return true;
 
     case 'CLEAR_SENT_JOB_IDS':

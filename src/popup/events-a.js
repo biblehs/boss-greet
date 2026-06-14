@@ -9,7 +9,7 @@ function bindEventsA() {
       // Extract text with PDF.js in popup (via offscreen or direct parsing)
       const text = await extractPdfInPopup(arrayBuffer);
       if (text) {
-        await sendMessage({ type: 'EXTRACT_RESUME', data: text, type: 'text' });
+        await sendMessage({ type: 'EXTRACT_RESUME', data: text, format: 'text' });
         updateResumeStatus();
         showToast('PDF resume parsed successfully', 2000);
       } else {
@@ -44,7 +44,7 @@ function bindEventsA() {
   $('#saveResumeText')?.addEventListener('click', async () => {
     const text = $('#resumeTextInput').value.trim();
     if (!text) { showToast('Please enter resume text'); return; }
-    await sendMessage({ type: 'EXTRACT_RESUME', data: text, type: 'text' });
+    await sendMessage({ type: 'EXTRACT_RESUME', data: text, format: 'text' });
     updateResumeStatus();
     showToast('Resume text saved', 2000);
   });
