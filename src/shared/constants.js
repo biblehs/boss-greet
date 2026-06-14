@@ -117,7 +117,12 @@ const AI_PROVIDERS = {
   },
   mimo: {
     name: 'Xiaomi MiMo',
-    endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
+    // tp- keys use Token Plan endpoint, sk- keys use pay-as-you-go endpoint
+    getEndpoint(apiKey) {
+      return (apiKey || '').startsWith('tp-')
+        ? 'https://token-plan-cn.xiaomimimo.com/v1/chat/completions'
+        : 'https://api.xiaomimimo.com/v1/chat/completions';
+    },
     defaultModel: 'mimo-v2.5-pro',
     headers(apiKey) {
       return { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };

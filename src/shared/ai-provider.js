@@ -23,7 +23,8 @@ const AIProvider = {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const resp = await fetch(p.endpoint, {
+      const url = p.getEndpoint ? p.getEndpoint(apiKey) : p.endpoint;
+      const resp = await fetch(url, {
         method: 'POST',
         headers: p.headers(apiKey),
         body: JSON.stringify(p.buildBody(model || p.defaultModel, messages, opts)),
