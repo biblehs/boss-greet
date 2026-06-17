@@ -334,12 +334,34 @@ window.initEventsA=function(){
     chrome.storage.local.remove('sw:sendResults');
     chrome.runtime.sendMessage({type:'CLEAR_SENT_JOB_IDS'});
   });
-  E.btnCollect.addEventListener('click',function(){
+  E.btnCollect.addEventListener('click',async function(){
     var cities=Store.get('selectedCities')||[];
     var positions=Store.get('selectedPositions')||[];
     var customPos=Store.get('customPositions')||[];
+    var jobPref=document.getElementById('jobPreferenceInput');
+    var hasPreference=jobPref&&jobPref.value.trim().length>20;
+
+    // 如果有职位偏好，使用 AI 匹配模式
+    if(hasPreference){
+      // 保存偏好
+      await sendMsg({ type: 'SAVE_JOB_PREFERENCE', preference: jobPref.value.trim() });
+      // 仍然需要城市来搜索
+      if(!cities.length){
+        alert('请至少选择目标城市');
+        return;
+      }
+      // 使用宽泛的搜索词，让 AI 来筛选
+      if(!positions.length&&!customPos.length){
+        // 设置宽泛默认词
+        Store.set('selectedPositions',['解决方案','产品经理','售前']);
+      }
+      window.toResults();
+      return;
+    }
+
+    // 传统模式：必须选择职位
     if(!cities.length||(!positions.length&&!customPos.length)){
-      alert('请至少选择目标城市和期望职位');
+      alert('请至少选择目标城市和期望职位，或填写职位偏好描述');
       return;
     }
     window.toResults();
@@ -446,6 +468,20 @@ window.initEventsA=function(){
       } catch (err) {
         if (resultEl) resultEl.textContent = '❌ 测试失败：' + err.message;
       }
+    });
+  }
+
+  // ── 职位偏好保存 ──
+  var jobPrefInput = document.getElementById('jobPreferenceInput');
+  if (jobPrefInput) {
+    // 加载已保存的偏好
+    sendMsg({ type: 'GET_JOB_PREFERENCE' }).then(function(resp) {
+      if (resp && resp.preference) jobPrefInput.value = resp.preference;
+    });
+
+    // 保存偏好
+    jobPrefInput.addEventListener('blur', async function() {
+      await sendMsg({ type: 'SAVE_JOB_PREFERENCE', preference: jobPrefInput.value.trim() });
     });
   }
 

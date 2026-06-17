@@ -246,6 +246,8 @@ let state = {
   // 新增：简历文本和分析结果
   resumeText: '',
   resumeAnalysis: null,
+  // 新增：职位偏好（自然语言）
+  jobPreference: '',
 };
 
 const sentJobIds = new Set();
@@ -373,8 +375,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         chrome.runtime.sendMessage({ type: 'ERROR', message: '未找到匹配岗位' }).catch(() => {});
         sendResponse({ success: true }); break;
       }
-      // 立即启动招呼语生成
-      if (!greetingPromise) greetingPromise = generateAllGreetingsConcurrent();
+
+      // 检查是否有职位偏好：有则用 AI 匹配，无则用传统模式
+      if (state.jobPreference && state.resumeText) {
+        console.log('[BossGreet] 检测到职位偏好，启动 AI 匹配模式');
+        greetingPromise = matchAndGenerateGreetings();
+      } else {
+        // 传统模式：直接生成招呼语
+        if (!greetingPromise) greetingPromise = generateAllGreetingsConcurrent();
+      }
       sendResponse({ success: true });
       break;
 
@@ -455,6 +464,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
     case 'TEST_API':
       testApiConnection().then(result => sendResponse(result)).catch(e => sendResponse({ success: false, error: e.message }));
+      return true;
+
+    case 'SAVE_JOB_PREFERENCE':
+      state.jobPreference = msg.preference || '';
+      chrome.storage.local.set({ 'sw:jobPreference': state.jobPreference });
+      sendResponse({ success: true });
+      break;
+
+    case 'GET_JOB_PREFERENCE':
+      sendResponse({ success: true, preference: state.jobPreference });
+      break;
+
+    case 'MATCH_AND_GENERATE':
+      matchAndGenerateGreetings().then(() => sendResponse({ success: true })).catch(e => sendResponse({ success: false, error: e.message }));
       return true;
 
     case 'EXTRACT_RESUME':
@@ -584,6 +607,151 @@ async function generateAllGreetingsConcurrent() {
   state.greetingProgress = { done: total, total };
   greetingPromise = null;
   pushState();
+}
+
+// ── AI 职位匹配 + 定制化招呼语生成 ──
+async function matchAndGenerateGreetings() {
+  const apiKey = await getApiKey();
+  if (!apiKey) throw new Error('请先配置 API Key');
+  if (!state.jobs.length) throw new Error('请先收集岗位');
+  if (!state.jobPreference) throw new Error('请先填写职位偏好');
+
+  const resumeText = state.resumeText;
+  const resumeAnalysis = state.resumeAnalysis;
+  if (!resumeText) throw new Error('请先上传简历');
+
+  state.greetingProgress = { done: 0, total: state.jobs.length };
+  state.phase = 'ready';
+  pushState();
+
+  const CONCURRENCY = 2;
+  let doneCount = 0;
+
+  // 分批处理：AI 先判断是否匹配，再生成招呼语
+  for (let i = 0; i < state.jobs.length; i += CONCURRENCY) {
+    const batch = state.jobs.slice(i, i + CONCURRENCY);
+    await Promise.allSettled(batch.map(async (job) => {
+      const jobId = job.jobId || job.id;
+      try {
+        // 第一步：AI 判断岗位是否匹配用户偏好
+        const matchResult = await aiMatchJob(apiKey, job, state.jobPreference, resumeAnalysis);
+
+        if (!matchResult.matched) {
+          // 不匹配：标记跳过
+          state.greetings[jobId] = `[跳过] ${matchResult.reason}`;
+          return;
+        }
+
+        // 第二步：生成定制化招呼语（结合匹配分析）
+        const greeting = await generateMatchedGreeting(apiKey, resumeText, resumeAnalysis, job, matchResult);
+        state.greetings[jobId] = greeting;
+      } catch (err) {
+        state.greetings[jobId] = '生成失败：' + (err.message || '未知错误');
+      }
+    }));
+
+    doneCount += batch.length;
+    state.greetingProgress.done = Math.min(doneCount, state.jobs.length);
+    pushState();
+  }
+
+  state.greetingProgress = { done: state.jobs.length, total: state.jobs.length };
+  pushState();
+}
+
+// ── AI 判断岗位是否匹配 ──
+async function aiMatchJob(apiKey, job, preference, resumeAnalysis) {
+  const jdText = job.jd?.desc || job.name;
+
+  const systemPrompt = `你是职位匹配分析师。根据用户的求职偏好和简历，判断这个岗位是否值得投递。
+
+返回 JSON 格式：
+{
+  "matched": true/false,
+  "score": 0-100,
+  "reason": "简短说明为什么匹配/不匹配",
+  "highlights": ["这个岗位吸引你的点1", "点2"],
+  "focus": "招呼语应该重点展示的方向"
+}
+
+判断标准：
+1. 岗位类型是否符合用户偏好（如：解决方案、产品经理、大客户经理等）
+2. 行业领域是否匹配（如：AI、fintech、跨境支付等）
+3. 工作方式是否符合（如：远程、混合办公等）
+4. 技术方向是否匹配（如：售前方案 vs 纯工程）
+5. 公司类型是否符合（如：国际化、创业公司等）`;
+
+  const userPrompt = `【用户求职偏好】
+${preference}
+
+【用户简历摘要】
+${resumeAnalysis || '未提供'}
+
+【岗位信息】
+公司：${job.company}
+职位：${job.name}
+薪资：${job.salary || '未标注'}
+JD：${jdText.substring(0, 500)}
+
+请判断这个岗位是否值得投递。`;
+
+  const response = await callMiMo(apiKey, [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ], 500, 30000, '岗位匹配');
+
+  try {
+    // 提取 JSON
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return { matched: true, score: 50, reason: '无法解析，默认匹配', highlights: [], focus: '' };
+  } catch (e) {
+    return { matched: true, score: 50, reason: '解析失败，默认匹配', highlights: [], focus: '' };
+  }
+}
+
+// ── 生成匹配的招呼语 ──
+async function generateMatchedGreeting(apiKey, resumeText, resumeAnalysis, job, matchResult) {
+  const jdText = job.jd?.desc || job.name;
+
+  const systemPrompt = `你是求职者本人，正在BOSS直聘上给HR发送招呼语。你的回复将直接发送给HR。
+
+【核心规则】
+1. 根据岗位匹配分析，重点展示与该岗位最相关的经验
+2. 包含1-2个量化成就（数字、百分比、规模）
+3. 字数控制在80-120字，语气真诚专业
+4. 以自然结尾，表达对岗位的兴趣
+
+【匹配分析结果】
+匹配度：${matchResult.score}分
+匹配原因：${matchResult.reason}
+岗位亮点：${matchResult.highlights?.join('、') || ''}
+展示重点：${matchResult.focus || '相关经验'}
+
+请根据匹配分析，生成一段精准的招呼语。`;
+
+  const userPrompt = `【你的简历】
+${resumeText}
+
+【目标岗位】
+公司：${job.company}
+职位：${job.name}
+薪资：${job.salary || '未标注'}
+
+【职位描述】
+${jdText.substring(0, 400)}
+
+【简历亮点】
+${resumeAnalysis || '未提供'}
+
+请生成一段针对这个岗位的定制化招呼语。`;
+
+  return callMiMo(apiKey, [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ], 400, 60000, '定制招呼语');
 }
 
 async function regenerateGreeting(jobId) {
