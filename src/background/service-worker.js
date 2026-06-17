@@ -453,6 +453,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       chrome.storage.local.set({ apiKey: msg.apiKey }, () => sendResponse({ success: true }));
       return true;
 
+    case 'TEST_API':
+      testApiConnection().then(result => sendResponse(result)).catch(e => sendResponse({ success: false, error: e.message }));
+      return true;
+
     case 'EXTRACT_RESUME':
       extractResume(msg.data, msg.format || 'text').then(text => sendResponse({ success: true, text })).catch(e => sendResponse({ success: false, error: e.message }));
       return true;
@@ -497,6 +501,21 @@ async function doAnalyzeResume() {
 async function getApiKey() {
   const { apiKey } = await chrome.storage.local.get('apiKey');
   return apiKey || '';
+}
+
+// ── 测试 API 连接 ──
+async function testApiConnection() {
+  const apiKey = await getApiKey();
+  if (!apiKey) throw new Error('请先保存 API Key');
+
+  try {
+    const result = await callMiMo(apiKey, [
+      { role: 'user', content: '你好，请回复"连接成功"' }
+    ], 50, 15000, '测试连接');
+    return { success: true, model: MIMO_CONFIG.model, reply: result.substring(0, 50) };
+  } catch (err) {
+    throw new Error(err.message);
+  }
 }
 
 // ── 招呼语并发生成 ──

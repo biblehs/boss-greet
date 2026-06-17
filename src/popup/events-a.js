@@ -429,32 +429,22 @@ window.initEventsA=function(){
     });
   }
 
-  // ── API 测试连接 ──
+  // ── API 测试连接（通过 Service Worker 代理，避免 CORS 问题） ──
   var btnTestKey = document.getElementById('btnTestKey');
   if (btnTestKey) {
     btnTestKey.addEventListener('click', async function() {
       var resultEl = document.getElementById('apiTestResult');
       if (resultEl) resultEl.textContent = '测试中...';
       try {
-        var resp = await sendMsg({ type: 'GET_API_KEY' });
-        if (resp && resp.apiKey) {
-          // 简单测试：调用一个轻量级请求
-          var testResp = await fetch('https://api.xiaomimimo.com/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + resp.apiKey },
-            body: JSON.stringify({ model: 'mimo-v2.5-pro', messages: [{ role: 'user', content: '你好' }], max_tokens: 10 }),
-            signal: AbortSignal.timeout(10000)
-          });
-          if (testResp.ok) {
-            if (resultEl) resultEl.textContent = '连接成功！';
-          } else {
-            if (resultEl) resultEl.textContent = '连接失败：' + testResp.status;
-          }
+        // 通过 Service Worker 测试 API
+        var resp = await sendMsg({ type: 'TEST_API' });
+        if (resp && resp.success) {
+          if (resultEl) resultEl.textContent = '✅ 连接成功！模型：' + (resp.model || 'mimo-v2.5-pro');
         } else {
-          if (resultEl) resultEl.textContent = '请先保存 API Key';
+          if (resultEl) resultEl.textContent = '❌ 连接失败：' + (resp?.error || '未知错误');
         }
       } catch (err) {
-        if (resultEl) resultEl.textContent = '测试失败：' + err.message;
+        if (resultEl) resultEl.textContent = '❌ 测试失败：' + err.message;
       }
     });
   }
