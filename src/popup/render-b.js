@@ -116,6 +116,7 @@ window.renderGroupsStable = function() {
 
 // ── 当前查看的岗位ID ──
 var _currentDetailJobId = null;
+var _detailEventsBound = false;
 
 // ── 绑定岗位卡片事件 ──
 function bindJobCardEvents() {
@@ -306,8 +307,11 @@ function closeJobDetail() {
   document.getElementById('jobDetailOverlay').classList.add('hidden');
 }
 
-// ── 绑定详情弹窗事件 ──
+// ── 绑定详情弹窗事件（只绑定一次）──
 function bindDetailEvents() {
+  if (_detailEventsBound) return;
+  _detailEventsBound = true;
+
   // 关闭按钮
   document.getElementById('jobDetailClose').addEventListener('click', closeJobDetail);
 
