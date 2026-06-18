@@ -276,17 +276,43 @@ function openJobDetail(jobId) {
   var greeting = greetings[jobId] || '等待生成...';
   var tag = getMatchTag(greeting);
 
-  // 填充详情
+  // 填充基本信息
   document.getElementById('detailTitle').textContent = job.name;
   document.getElementById('detailCompany').textContent = job.company || '--';
   document.getElementById('detailSalary').textContent = job.salary || '--';
-  document.getElementById('detailTags').textContent = (job.tags || []).join('、') || '--';
+  document.getElementById('detailHR').textContent = job.hrName || '--';
+  document.getElementById('detailActive').textContent = job.hrActivity?.desc || '--';
+
+  // 填充标签
+  var tagsEl = document.getElementById('detailTags');
+  if (job.tags && job.tags.length > 0) {
+    tagsEl.innerHTML = job.tags.map(function(t) { return '<span class="detail-tag">' + esc(t) + '</span>'; }).join('');
+  } else {
+    tagsEl.textContent = '--';
+  }
+
+  // 填充关键词
+  var keywordsEl = document.getElementById('detailKeywords');
+  var keywords = job.jd?.keywords || [];
+  if (keywords.length > 0) {
+    keywordsEl.innerHTML = keywords.map(function(k) { return '<span class="detail-keyword">' + esc(k) + '</span>'; }).join('');
+  } else {
+    keywordsEl.textContent = '--';
+  }
+
+  // 填充职位描述
   document.getElementById('detailJD').textContent = job.jd?.desc || '暂无职位描述';
+
+  // 填充岗位链接
+  var linkEl = document.getElementById('detailLink');
+  var jobLink = job.link || job.jobLink || ('https://www.zhipin.com/job_detail/' + job.id + '.html');
+  linkEl.href = jobLink;
+
+  // 填充招呼语
   document.getElementById('detailGreeting').textContent = greeting;
 
   // 设置发送按钮状态
   var sendBtn = document.getElementById('btnDetailSend');
-  var skipBtn = document.getElementById('btnDetailSkip');
   if (sendBtn) {
     if (job.checked !== false && tag.cls === 'tag-good') {
       sendBtn.textContent = '已加入 ✓';
@@ -296,6 +322,10 @@ function openJobDetail(jobId) {
       sendBtn.classList.remove('added');
     }
   }
+
+  // 重置编辑状态
+  document.getElementById('btnDetailEdit').classList.remove('hidden');
+  document.getElementById('btnDetailSave').classList.add('hidden');
 
   // 显示弹窗
   document.getElementById('jobDetailOverlay').classList.remove('hidden');

@@ -291,22 +291,51 @@ ai方向偏好售前解决方案，不要纯基础架构和工程岗位
         <button class="job-detail-close" id="jobDetailClose">&times;</button>
       </div>
       <div class="job-detail-body" id="detailBody">
-        <div class="detail-row">
-          <span class="detail-label">公司</span>
-          <span class="detail-value" id="detailCompany">--</span>
+        <!-- 基本信息 -->
+        <div class="detail-info-grid">
+          <div class="detail-info-item">
+            <span class="detail-info-label">公司</span>
+            <span class="detail-info-value" id="detailCompany">--</span>
+          </div>
+          <div class="detail-info-item">
+            <span class="detail-info-label">薪资</span>
+            <span class="detail-info-value detail-salary" id="detailSalary">--</span>
+          </div>
+          <div class="detail-info-item">
+            <span class="detail-info-label">HR</span>
+            <span class="detail-info-value" id="detailHR">--</span>
+          </div>
+          <div class="detail-info-item">
+            <span class="detail-info-label">活跃</span>
+            <span class="detail-info-value" id="detailActive">--</span>
+          </div>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">薪资</span>
-          <span class="detail-value" id="detailSalary">--</span>
+
+        <!-- 标签 -->
+        <div class="detail-section">
+          <div class="detail-section-title">岗位标签</div>
+          <div class="detail-tags" id="detailTags">--</div>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">标签</span>
-          <span class="detail-value" id="detailTags">--</span>
+
+        <!-- 关键词 -->
+        <div class="detail-section">
+          <div class="detail-section-title">JD 关键词</div>
+          <div class="detail-keywords" id="detailKeywords">--</div>
         </div>
+
+        <!-- 职位描述 -->
         <div class="detail-section">
           <div class="detail-section-title">职位描述</div>
           <div class="detail-jd" id="detailJD">--</div>
         </div>
+
+        <!-- 岗位链接 -->
+        <div class="detail-section">
+          <div class="detail-section-title">岗位链接</div>
+          <a class="detail-link" id="detailLink" href="#" target="_blank" rel="noopener">在 BOSS 直聘中查看</a>
+        </div>
+
+        <!-- AI 招呼语 -->
         <div class="detail-section">
           <div class="detail-section-title">AI 招呼语</div>
           <div class="detail-greeting" id="detailGreeting">--</div>
