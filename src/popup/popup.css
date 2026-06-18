@@ -477,3 +477,278 @@ body{
 .pay-label{
   font-size:11px;font-weight:500;color:var(--text-weak);user-select:none;
 }
+
+/* ════════════════════════════════════════════════════════════
+   精准匹配模式样式
+   ════════════════════════════════════════════════════════════ */
+
+.match-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.stat-num {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-matched .stat-num { color: var(--green); }
+.stat-skipped .stat-num { color: var(--red); }
+.stat-pending .stat-num { color: var(--accent); }
+
+.stat-item span:last-child {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.match-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  border-color: var(--accent);
+}
+
+.filter-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.job-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.job-card-precise {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  transition: all 0.2s;
+}
+
+.job-card-precise:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.job-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.job-card-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.job-check {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.job-check svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.job-check.checked {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.job-check.checked svg {
+  opacity: 1;
+  stroke: white;
+}
+
+.job-match-tag {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tag-good {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.tag-skip {
+  background: #fef2f2;
+  color: var(--red);
+}
+
+.tag-pending {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.tag-fail {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.job-card-info {
+  flex: 1;
+}
+
+.job-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.job-company {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.job-salary {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.job-jd-preview {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.5;
+  padding: 8px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+.job-greeting-area {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.greeting-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.greeting-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  padding: 10px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+}
+
+.greeting-text.hidden {
+  display: none;
+}
+
+.greeting-edit {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.greeting-edit.hidden {
+  display: none;
+}
+
+.greeting-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-greeting-edit,
+.btn-greeting-save,
+.btn-greeting-regen {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-greeting-edit:hover,
+.btn-greeting-save:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-greeting-save {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.btn-greeting-regen {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.btn-greeting-regen:hover {
+  background: var(--green-light);
+}
+
+.btn-greeting-edit.hidden,
+.btn-greeting-save.hidden {
+  display: none;
+}
+
+.hidden {
+  display: none !important;
+}
