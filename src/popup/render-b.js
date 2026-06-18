@@ -110,14 +110,31 @@ window.renderGroupsStable = function() {
 
   // 绑定事件
   bindJobCardEvents();
+  bindDetailEvents();
   updateSelectedCount();
 };
 
+// ── 当前查看的岗位ID ──
+var _currentDetailJobId = null;
+
 // ── 绑定岗位卡片事件 ──
 function bindJobCardEvents() {
+  // 岗位卡片点击 → 打开详情
+  document.querySelectorAll('.job-card-precise').forEach(function(card) {
+    card.addEventListener('click', function(e) {
+      // 忽略按钮点击
+      if (e.target.closest('.job-check') || e.target.closest('.greeting-actions') ||
+          e.target.closest('.btn-greeting-edit') || e.target.closest('.btn-greeting-save') ||
+          e.target.closest('.btn-greeting-regen')) return;
+      var jobId = this.dataset.jobId;
+      openJobDetail(jobId);
+    });
+  });
+
   // 勾选框
   document.querySelectorAll('.job-check').forEach(function(cb) {
-    cb.addEventListener('click', function() {
+    cb.addEventListener('click', function(e) {
+      e.stopPropagation();
       var jobId = this.dataset.jobId;
       this.classList.toggle('checked');
       var jobs = Store.get('jobs') || [];
@@ -245,6 +262,147 @@ function updateSelectedCount() {
   var totalEl = document.getElementById('resultCountTotal');
   if (numEl) numEl.textContent = selected;
   if (totalEl) totalEl.textContent = total;
+}
+
+// ── 打开岗位详情 ──
+function openJobDetail(jobId) {
+  _currentDetailJobId = jobId;
+  var jobs = Store.get('jobs') || [];
+  var job = jobs.find(function(j) { return j.id === jobId; });
+  if (!job) return;
+
+  var greetings = Store.get('greetings') || {};
+  var greeting = greetings[jobId] || '等待生成...';
+  var tag = getMatchTag(greeting);
+
+  // 填充详情
+  document.getElementById('detailTitle').textContent = job.name;
+  document.getElementById('detailCompany').textContent = job.company || '--';
+  document.getElementById('detailSalary').textContent = job.salary || '--';
+  document.getElementById('detailTags').textContent = (job.tags || []).join('、') || '--';
+  document.getElementById('detailJD').textContent = job.jd?.desc || '暂无职位描述';
+  document.getElementById('detailGreeting').textContent = greeting;
+
+  // 设置发送按钮状态
+  var sendBtn = document.getElementById('btnDetailSend');
+  var skipBtn = document.getElementById('btnDetailSkip');
+  if (sendBtn) {
+    if (job.checked !== false && tag.cls === 'tag-good') {
+      sendBtn.textContent = '已加入 ✓';
+      sendBtn.classList.add('added');
+    } else {
+      sendBtn.textContent = '加入发送';
+      sendBtn.classList.remove('added');
+    }
+  }
+
+  // 显示弹窗
+  document.getElementById('jobDetailOverlay').classList.remove('hidden');
+}
+
+// ── 关闭岗位详情 ──
+function closeJobDetail() {
+  _currentDetailJobId = null;
+  document.getElementById('jobDetailOverlay').classList.add('hidden');
+}
+
+// ── 绑定详情弹窗事件 ──
+function bindDetailEvents() {
+  // 关闭按钮
+  document.getElementById('jobDetailClose').addEventListener('click', closeJobDetail);
+
+  // 点击遮罩关闭
+  document.getElementById('jobDetailOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeJobDetail();
+  });
+
+  // 编辑招呼语
+  document.getElementById('btnDetailEdit').addEventListener('click', function() {
+    var greetingEl = document.getElementById('detailGreeting');
+    var currentText = greetingEl.textContent;
+    greetingEl.innerHTML = '<textarea class="detail-greeting-edit" id="detailGreetingEdit">' + esc(currentText) + '</textarea>';
+    this.classList.add('hidden');
+    document.getElementById('btnDetailSave').classList.remove('hidden');
+  });
+
+  // 保存招呼语
+  document.getElementById('btnDetailSave').addEventListener('click', function() {
+    var textarea = document.getElementById('detailGreetingEdit');
+    if (!textarea) return;
+    var newGreeting = textarea.value.trim();
+    document.getElementById('detailGreeting').textContent = newGreeting;
+    this.classList.add('hidden');
+    document.getElementById('btnDetailEdit').classList.remove('hidden');
+
+    // 更新存储
+    if (_currentDetailJobId) {
+      var greetings = Store.get('greetings') || {};
+      greetings[_currentDetailJobId] = newGreeting;
+      Store.set('greetings', greetings);
+      chrome.runtime.sendMessage({ type: 'UPDATE_GREETING', jobId: _currentDetailJobId, greeting: newGreeting });
+      // 更新列表中的显示
+      var textEl = document.querySelector('.greeting-text[data-job-id="' + _currentDetailJobId + '"]');
+      if (textEl) textEl.textContent = newGreeting;
+    }
+  });
+
+  // 重新生成招呼语
+  document.getElementById('btnDetailRegen').addEventListener('click', async function() {
+    if (!_currentDetailJobId) return;
+    this.disabled = true;
+    this.textContent = '生成中...';
+    try {
+      var resp = await sendMsg({ type: 'REGENERATE_GREETING', jobId: _currentDetailJobId });
+      if (resp && resp.success) {
+        document.getElementById('detailGreeting').textContent = resp.greeting;
+        // 更新存储和列表
+        var greetings = Store.get('greetings') || {};
+        greetings[_currentDetailJobId] = resp.greeting;
+        Store.set('greetings', greetings);
+        var textEl = document.querySelector('.greeting-text[data-job-id="' + _currentDetailJobId + '"]');
+        if (textEl) textEl.textContent = resp.greeting;
+      } else {
+        alert('生成失败：' + (resp?.error || '未知错误'));
+      }
+    } catch (err) {
+      alert('生成失败：' + err.message);
+    }
+    this.disabled = false;
+    this.textContent = '重新生成';
+  });
+
+  // 加入发送
+  document.getElementById('btnDetailSend').addEventListener('click', function() {
+    if (!_currentDetailJobId) return;
+    var jobs = Store.get('jobs') || [];
+    var job = jobs.find(function(j) { return j.id === _currentDetailJobId; });
+    if (job) {
+      job.checked = true;
+      Store.set('jobs', jobs);
+      // 更新列表中的勾选状态
+      var cb = document.querySelector('.job-check[data-job-id="' + _currentDetailJobId + '"]');
+      if (cb) cb.classList.add('checked');
+      updateSelectedCount();
+      this.textContent = '已加入 ✓';
+      this.classList.add('added');
+    }
+  });
+
+  // 跳过
+  document.getElementById('btnDetailSkip').addEventListener('click', function() {
+    if (!_currentDetailJobId) return;
+    var jobs = Store.get('jobs') || [];
+    var job = jobs.find(function(j) { return j.id === _currentDetailJobId; });
+    if (job) {
+      job.checked = false;
+      Store.set('jobs', jobs);
+      // 更新列表中的勾选状态
+      var cb = document.querySelector('.job-check[data-job-id="' + _currentDetailJobId + '"]');
+      if (cb) cb.classList.remove('checked');
+      updateSelectedCount();
+      closeJobDetail();
+    }
+  });
 }
 
 // ── 辅助函数 ──

@@ -279,8 +279,48 @@ ai方向偏好售前解决方案，不要纯基础架构和工程岗位
       <span class="count-unit">/ <span id="resultCountTotal">0</span>个岗位已选</span>
     </div>
     <div class="bottom-actions">
-      <button class="btn btn-ghost" id="btnRegenAll" style="font-size:12px">重新分析</button>
       <button class="btn btn-send" id="btnSend">发送选中</button>
+    </div>
+  </div>
+
+  <!-- 岗位详情弹窗 -->
+  <div class="job-detail-overlay hidden" id="jobDetailOverlay">
+    <div class="job-detail-panel" id="jobDetailPanel">
+      <div class="job-detail-header">
+        <div class="job-detail-title" id="detailTitle">岗位名称</div>
+        <button class="job-detail-close" id="jobDetailClose">&times;</button>
+      </div>
+      <div class="job-detail-body" id="detailBody">
+        <div class="detail-row">
+          <span class="detail-label">公司</span>
+          <span class="detail-value" id="detailCompany">--</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">薪资</span>
+          <span class="detail-value" id="detailSalary">--</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">标签</span>
+          <span class="detail-value" id="detailTags">--</span>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">职位描述</div>
+          <div class="detail-jd" id="detailJD">--</div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">AI 招呼语</div>
+          <div class="detail-greeting" id="detailGreeting">--</div>
+          <div class="detail-greeting-actions">
+            <button class="btn-detail-edit" id="btnDetailEdit">编辑</button>
+            <button class="btn-detail-save hidden" id="btnDetailSave">保存</button>
+            <button class="btn-detail-regen" id="btnDetailRegen">重新生成</button>
+          </div>
+        </div>
+      </div>
+      <div class="job-detail-footer">
+        <button class="btn-detail-skip" id="btnDetailSkip">跳过</button>
+        <button class="btn-detail-send" id="btnDetailSend">加入发送</button>
+      </div>
     </div>
   </div>
 

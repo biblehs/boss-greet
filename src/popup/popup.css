@@ -752,3 +752,210 @@ body{
 .hidden {
   display: none !important;
 }
+
+/* ════════════════════════════════════════════════════════════
+   岗位详情弹窗
+   ════════════════════════════════════════════════════════════ */
+
+.job-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.job-detail-panel {
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  background: var(--card);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.job-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg);
+}
+
+.job-detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.job-detail-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.job-detail-close:hover {
+  background: var(--border-light);
+  color: var(--text);
+}
+
+.job-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.detail-label {
+  width: 60px;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.detail-section {
+  margin-top: 16px;
+}
+
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.detail-jd {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.7;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.detail-greeting {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.7;
+  padding: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+}
+
+.detail-greeting-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-detail-edit,
+.btn-detail-save,
+.btn-detail-regen {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-detail-save {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.btn-detail-regen {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.btn-detail-regen:hover {
+  background: var(--green-light);
+}
+
+.job-detail-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg);
+}
+
+.btn-detail-skip,
+.btn-detail-send {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-detail-skip {
+  background: var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-detail-skip:hover {
+  background: var(--text-muted);
+  color: white;
+}
+
+.btn-detail-send {
+  background: var(--green);
+  color: white}
+
+.btn-detail-send:hover {
+  background: var(--green-hover);
+}
+
+.btn-detail-send.added {
+  background: var(--border);
+  color: var(--text-muted);
+}
