@@ -171,13 +171,17 @@ function bindJobCardEvents() {
   });
 
   // 重新生成招呼语
-  document.querySelectorAll('.btn-greeting-regen').forEach(function(btn) {
+  var regenBtns = document.querySelectorAll('.btn-greeting-regen');
+  console.log('[BossGreet] Found', regenBtns.length, 'regenerate buttons');
+  regenBtns.forEach(function(btn) {
     btn.addEventListener('click', async function() {
       var jobId = this.dataset.jobId;
+      console.log('[BossGreet] Regenerate clicked for jobId:', jobId);
       this.disabled = true;
       this.textContent = '生成中...';
       try {
         var resp = await sendMsg({ type: 'REGENERATE_GREETING', jobId: jobId });
+        console.log('[BossGreet] Regenerate response:', resp);
         if (resp && resp.success) {
           var textEl = document.querySelector('.greeting-text[data-job-id="' + jobId + '"]');
           var editEl = document.querySelector('.greeting-edit[data-job-id="' + jobId + '"]');
@@ -195,9 +199,11 @@ function bindJobCardEvents() {
           greetings[jobId] = resp.greeting;
           Store.set('greetings', greetings);
         } else {
+          console.error('[BossGreet] Regenerate failed:', resp);
           alert('生成失败：' + (resp?.error || '未知错误'));
         }
       } catch (err) {
+        console.error('[BossGreet] Regenerate error:', err);
         alert('生成失败：' + err.message);
       }
       this.disabled = false;
@@ -248,10 +254,16 @@ function esc(str) {
 }
 
 function sendMsg(msg) {
+  console.log('[BossGreet] Sending message:', msg.type);
   return new Promise(function(resolve) {
     chrome.runtime.sendMessage(msg, function(resp) {
-      if (chrome.runtime.lastError) resolve({ success: false, error: chrome.runtime.lastError.message });
-      else resolve(resp);
+      if (chrome.runtime.lastError) {
+        console.error('[BossGreet] Message error:', chrome.runtime.lastError.message);
+        resolve({ success: false, error: chrome.runtime.lastError.message });
+      } else {
+        console.log('[BossGreet] Message response:', resp);
+        resolve(resp);
+      }
     });
   });
 }

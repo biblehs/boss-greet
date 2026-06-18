@@ -92,45 +92,29 @@ async function generateGreetingFromText(apiKey, resumeText, resumeAnalysis, job)
   const jdText = job.jd?.desc || job.jd?.fullDesc || job.name;
   const jdKeywords = job.jd?.keywords?.join('、') || '';
 
-  let systemPrompt = `你是求职者本人，正在BOSS直聘上给HR发送招呼语。你的回复将直接发送给HR，严禁添加任何注释、说明、括号备注、替换建议或引导语。
+  let systemPrompt = `你是求职者，正在BOSS直聘给HR发招呼语。直接输出招呼语，不要任何注释。
 
-【核心规则】
-1. 仔细阅读"职位描述"中的具体要求（职责、技术栈、经验要求等）
-2. 从"你的简历"中找到与JD要求最匹配的经验和技能
-3. 包含至少1-2个量化成就（数字、百分比、金额、规模指标等）
-4. 字数控制在80-120字，语气真诚专业，不要夸张
-5. 如果JD提到具体技术栈，必须引用简历中的相关经验
-6. 以自然、专业的结尾收尾，表达对该岗位的热情
-
-【量化策略】
-- 将模糊成就转化为数字："提升性能" → "加载时间从 3.2s 降至 0.8s（提升 75%）"
-- 包含规模指标：团队人数、用户数、交易量、数据规模
-- 引用业务影响：收入增长、成本降低、效率提升`;
+规则：
+1. 80-120字，真诚专业
+2. 包含1个量化成就（数字/百分比）
+3. 匹配JD要求的经验
+4. 自然结尾`;
 
   if (resumeAnalysis) {
-    systemPrompt += `\n\n【简历亮点摘要】
-${resumeAnalysis}
-使用这些亮点快速匹配JD要求。优先使用与JD直接对应的成就和技能。`;
+    systemPrompt += `\n\n简历亮点：\n${resumeAnalysis.substring(0, 300)}`;
   }
 
-  const userPrompt = `【你的简历】
-${resumeText}
+  const userPrompt = `简历：${resumeText.substring(0, 500)}
 
-【目标岗位】
-公司：${job.company}
-职位：${job.name}
-薪资：${job.salary || '未标注'}
-${jdKeywords ? 'JD关键词：' + jdKeywords : ''}
+岗位：${job.company} - ${job.name} (${job.salary || '未标注'})
+JD：${jdText.substring(0, 300)}
 
-【职位描述详情】
-${jdText}
-
-根据JD中的具体要求，从简历中挑选最相关的经验，写一段个性化招呼语。重点展示你能解决JD中提到的问题，并包含量化成就。`;
+写一段个性化招呼语。`;
 
   return callMiMo(apiKey, [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt },
-  ], 500, 60000, '招呼语生成');
+  ], 200, 30000, '招呼语');
 }
 
 // ── 基于简历图片生成招呼语（原有功能） ──
@@ -755,10 +739,18 @@ ${resumeAnalysis || '未提供'}
 }
 
 async function regenerateGreeting(jobId) {
+  console.log('[BossGreet] regenerateGreeting called for jobId:', jobId);
   const apiKey = await getApiKey();
   if (!apiKey) throw new Error('请先配置 API Key');
+  if (!state.jobs || state.jobs.length === 0) throw new Error('没有岗位数据');
+
   const job = state.jobs.find(j => (j.jobId || j.id) === jobId);
-  if (!job) throw new Error('未找到岗位');
+  if (!job) {
+    console.error('[BossGreet] Job not found:', jobId, 'Available jobs:', state.jobs.map(j => j.jobId || j.id));
+    throw new Error('未找到岗位');
+  }
+
+  console.log('[BossGreet] Found job:', job.name, job.company);
 
   let greeting;
   if (state.resumeText) {
@@ -767,6 +759,8 @@ async function regenerateGreeting(jobId) {
     const resumeImages = await loadResumeImages();
     greeting = await generateGreetingFromImage(apiKey, resumeImages, job.name);
   }
+
+  console.log('[BossGreet] Generated greeting length:', greeting?.length);
   state.greetings[jobId] = greeting;
   pushState();
   return greeting;
