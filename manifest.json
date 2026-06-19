@@ -30,6 +30,7 @@
       "js": [
         "src/content/selectors.js",
         "src/content/salary-decoder.js",
+        "src/content/jd-extractor.js",
         "src/shared/error-logger.js",
         "src/content/job-collector.js",
         "src/content/job-sender.js",

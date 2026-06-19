@@ -130,20 +130,107 @@ const JobCollector = {
     }
     return plan;
   },
+
+  // ── 提取完整 JD（点击卡片，从右侧面板提取）──
+  async extractJDsFromPanel(progressCb) {
+    const jobs = [...this.collected.values()];
+    let extracted = 0;
+
+    for (let i = 0; i < jobs.length; i++) {
+      if (this.stopped) break;
+      const job = jobs[i];
+
+      try {
+        const card = this._findCardByJobId(job.id);
+        if (!card) continue;
+
+        card.scrollIntoView({ block: 'center', behavior: 'instant' });
+        await sleep(300);
+        card.click();
+        await sleep(1500);
+
+        // 使用 JDExtractor 提取完整 JD
+        if (typeof JDExtractor !== 'undefined') {
+          const panelData = JDExtractor.extractFromPanel();
+          if (panelData && panelData.desc) {
+            job.jd = {
+              desc: panelData.desc,
+              fullDesc: panelData.desc,
+              tags: panelData.tags,
+              complete: panelData.complete,
+              keywords: panelData.keywords || [],
+            };
+            job.hrName = panelData.hrName;
+            job.hrCompany = panelData.hrCompany;
+            job.hrActivity = panelData.activity;
+            extracted++;
+          }
+        }
+
+        if (progressCb) {
+          progressCb({ jdExtracted: extracted, jdTotal: jobs.length, current: job.name });
+        }
+      } catch (e) {
+        console.warn('[BossGreet] JD extraction failed:', job.name, e.message);
+      }
+    }
+
+    return extracted;
+  },
+
+  _findCardByJobId(jobId) {
+    const cards = document.querySelectorAll(SELECTORS.jobs.jobCard);
+    for (const card of cards) {
+      const link = card.querySelector('a')?.href || '';
+      if (link.includes(jobId)) return card;
+    }
+    return null;
+  },
 };
 
 // ── 收集入口 ──
 // 注意：导航逻辑已移至 service worker，避免页面重载销毁 content script 执行上下文
 async function runCollection(params, progressCb) {
   JobCollector.collected.clear();
+  JobCollector.stopped = false;
 
+  // Phase 1: 滚动收集所有卡片
+  console.log('[BossGreet] Phase 1: Scrolling to load cards...');
   await JobCollector.scrollToLoad(progressCb);
+  const jobs = [...JobCollector.collected.values()];
+  console.log('[BossGreet] Phase 1 complete:', jobs.length, 'cards found');
+
+  if (jobs.length === 0) {
+    return { jobs: [], clusters: {}, count: 0, jdSamples: {} };
+  }
+
+  // Phase 2: 提取完整 JD
+  console.log('[BossGreet] Phase 2: Extracting JDs...');
+  if (progressCb) progressCb({ phase: 'jd_extract', jdTotal: jobs.length });
+
+  // 设置超时保护（最多 5 分钟）
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('JD extraction timeout')), 5 * 60 * 1000);
+  });
+
+  try {
+    await Promise.race([
+      JobCollector.extractJDsFromPanel(progressCb),
+      timeoutPromise,
+    ]);
+  } catch (e) {
+    console.warn('[BossGreet] JD extraction timeout or error:', e.message);
+  }
+
+  const finalJobs = [...JobCollector.collected.values()];
   const clusters = JobCollector.clusterByTag();
 
+  console.log('[BossGreet] Collection complete:', finalJobs.length, 'jobs,', finalJobs.filter(j => j.jd).length, 'with JD');
+
   return {
-    jobs: [...JobCollector.collected.values()],
+    jobs: finalJobs,
     clusters,
-    count: JobCollector.collected.size,
+    count: finalJobs.length,
     jdSamples: JobCollector.sampleJDs(clusters),
   };
 }
